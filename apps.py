@@ -295,3 +295,33 @@ def center_window(root, width, height):
     size = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
     # print(size)
     root.geometry(size)
+
+
+def create_New():
+    root = Toplevel()
+
+    Label(root, text="功能名", font=fontStyle1).pack()
+    root.title("变换域水印")
+    root.geometry('700x400')
+    button3 = Button(root, text="DCT水印嵌入", command=DCT_yinxie)  # 控制label的边界
+    button4 = Button(root, text="DCT水印提取", command=DCT_tiqu)  # 控制label的颜色
+    button3.place(height=60, width=200, x=100, y=150)
+    button4.place(height=60, width=200, x=400, y=150)
+
+    Message(root, text='∎DCT水印嵌入由用户选择图片和隐藏信息\n∎对图像进行DCT变换后将秘密信息写入\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像', cursor='cross'
+            , width='150').place(x=100, y=250)
+    Message(root, text='∎DCT提取由用户选择要提取信息的图片和提取信息的保存路径\n∎程序将读取DCT隐写时保存的图像并提取出信息并保存到用户选择的路径', cursor='cross'
+            , width='150').place(x=430, y=250)
+
+    myentry = Entry(root)
+    myentry.place(x=280, y=300)
+
+    def get_entry_text():
+        global DCT_text_len
+        DCT_text_len = myentry.get()
+        tkinter.messagebox.showinfo('提示', '提取信息长度已被设置为 ' + DCT_text_len)
+        print(DCT_text_len)
+
+    Button(root, text="输入提取信息的长度", command=get_entry_text).place(x=280, y=330)
+
+    root.mainloop()
