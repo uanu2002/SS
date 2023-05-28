@@ -22,6 +22,7 @@ quant = np.array([[16, 11, 10, 16, 24, 40, 51, 61],  # QUANTIZATION TABLE
 global choosepic_LSB_basic
 global LSB_text_len
 global DCT_text_len
+DCT_text_len = 10
 global LSB_suijijiange_step
 LSB_suijijiange_step = 2
 global LSB_suijijiange_text_len
@@ -287,14 +288,13 @@ def DCT_yinxie():
 
 
 def DCT_tiqu():
-    # print('le: ',le)
     count = int(DCT_text_len)
     print('count: ', count)
 
     tkinter.messagebox.showinfo('提示', '请选择要进行DCT提取的图像')
     Fpath = filedialog.askopenfilename()
     dct_encoded_image_file = Fpath.split('/')[-1]
-
+    # dct_encoded_image_file = './LS'
     dct_img = cv2.imread(dct_encoded_image_file, 0)
     print(dct_img)
     y = dct_img
@@ -865,3 +865,25 @@ def LSB_quyujiaoyan_tiqu():
     LSB_new = Fpath
     func_LSB_quyujiaoyan_tiqu(le, LSB_new, tiqu)
     tkinter.messagebox.showinfo('提示', '隐藏信息已提取,请查看LSB-regional_verification-recover.txt')
+
+
+def DCT_trans(grayImage):
+    height, width = grayImage.shape
+    grayImage = grayImage.astype(float)
+    lenna_dct = cv2.dct(grayImage)
+    # 记录正负矩阵
+    dct_flag = np.ones((height, width))
+    for i in range(height):
+        for j in range(width):
+            if lenna_dct[i, j] < 0:
+                dct_flag[i, j] = -1
+    # 取log，并进行归一化
+    lenna_dct_log = np.log(1 + abs(lenna_dct))
+    dct_max = np.max(lenna_dct_log)
+    dct_min = np.min(lenna_dct_log)
+    lenna_dct_log255 = np.zeros((height, width), np.uint8)
+    for i in range(height):
+        for j in range(width):
+            lenna_dct_log255[i, j] = (lenna_dct_log[i, j] - dct_min) \
+                                  / (dct_max - dct_min) * 255
+    return lenna_dct_log255

@@ -1,5 +1,5 @@
 import random
-
+import cv2
 
 def plus(str):
     return str.zfill(8)
@@ -90,3 +90,25 @@ def randinterval(m, n, count, key):
         col[i] = c
 
     return row, col
+
+
+def set_center(root, width, height):
+    # 获取屏幕的宽度和高度
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # 窗口的宽度和高度
+    window_width = width
+    window_height = height
+
+    # 计算窗口的左上角坐标，使其居中显示在屏幕上
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2
+
+    # 设置窗口的初始位置
+    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+def path2cv2(img_path):
+    img = cv2.imread(img_path )
+    cv2img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return cv2img
