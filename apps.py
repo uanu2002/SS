@@ -390,33 +390,69 @@ class WatermarkSystem2:
     def update_function_sub(self, selected_value):
         values = list()
         if selected_value == "图像分析":
-            values = ["时域重建", "FFT频域分析", "DCT频域分析"]
+            values = ["FFT时域重建", "DCT时域重建", "FFT频域分析", "DCT频域分析"]
 
         elif selected_value == "水印添加":
-            values = ["频域水印", "可追踪水印"]
+            values = ["FFT频域水印", "DCT频域水印", "可追踪水印"]
         elif selected_value == "篡改检测":
             values = ["篡改存在", "篡改定位"]
         self.function_combobox_sub['values'] = values
 
     def call_method(self, selected_method):
         prefix_img_path_in = rootdir + str(self.combobox1.get())
+        prefix_img_path_in2 = rootdir + str(self.combobox2.get())
         new_option = str(self.combobox1.get()) + '_out'
         img_path_in = prefix_img_path_in + '.png'
+        img_path_in2 = prefix_img_path_in2 + '.png'
         img_out = None
         if selected_method == "FFT频域分析":
             img_in = path2cv2(img_path_in)
-            img_out = FFT_trans(img_in)
+            img_out, _, _, _ = FFT_trans(img_in)
             new_option = new_option + '_FFT'
 
         elif selected_method == "DCT频域分析":
             img_in = path2cv2(img_path_in)
-            img_out = DCT_trans(img_in)
+            img_out, _, _, _ = DCT_trans(img_in)
             new_option = new_option + '_DCT'
 
-        elif selected_method == "时域重建":
+        elif selected_method == "FFT时域重建":
+            parts = prefix_img_path_in.rsplit("_", 1)[0]
+            parts = parts.split("_", 1)
+            img_path_in0 = parts[0] + '.png'
+            img_in0 = path2cv2(img_path_in0)
             img_in = path2cv2(img_path_in)
-            img_out = IFFT_trans(img_in)
+            img_fft2_log_wm, fft2_flag, fft2_max, fft2_min = FFT_trans(img_in0)
+            img_out = IFFT_trans(img_fft2_log_wm, fft2_flag, fft2_max, fft2_min)
             new_option = new_option + '_IFFT'
+
+        elif selected_method == "DCT时域重建":
+            parts = prefix_img_path_in.rsplit("_", 1)[0]
+            parts = parts.split("_", 1)
+            img_path_in0 = parts[0] + '.png'
+            img_in0 = path2cv2(img_path_in0)
+            img_in = path2cv2(img_path_in)
+            img_dct_log255, dct_flag, dct_max, dct_min = DCT_trans(img_in0)
+            img_out = IDCT_trans(img_dct_log255, dct_flag, dct_max, dct_min)
+            print(img_out)
+            new_option = new_option + '_IDCT'
+
+        elif selected_method == "FFT频域水印":
+            img_in = path2cv2(img_path_in)
+            wm_img = path2cv2(self.mask_path)
+            img_out = FFT_insert(img_in, wm_img)
+            new_option = new_option + '_FFT_marked'
+
+        elif selected_method == "DCT频域水印":
+            img_in = path2cv2(img_path_in)
+            wm_img = path2cv2(self.mask_path)
+            img_out = DCT_insert(img_in, wm_img)
+            new_option = new_option + '_DCT_marked'
+
+        elif selected_method == "篡改存在":
+            img_in = path2cv2(img_path_in)
+            img_in2 = path2cv2(img_path_in2)
+            img_out = Change_Detect(img_in2, img_in)
+            new_option = new_option + '_diff'
 
         elif selected_method == "可追踪水印":
             host_image = cv2.imread(img_path_in, 1)
@@ -430,6 +466,7 @@ class WatermarkSystem2:
             watermarked_image = cv2.imread(img_path_in, 1)
             img_out = trace_extract(watermarked_image)
             new_option = new_option + '_Trace_extrated'
+
 
 
         img_path_out = rootdir + new_option + '.png'
@@ -488,6 +525,20 @@ class WatermarkSystem2:
         txt = self.entry.get()
         print(txt)
 
+    def add_tamper(self):
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        new_option = str(self.combobox1.get()) + '_out'
+        img_path_in = prefix_img_path_in + '.png'
+        img_in = cv2.imread(img_path_in, 1)
+        img_out = img_tamper(img_in)
+        new_option = new_option + '_Tampered'
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
+
     def resize(self, event):
         # 在窗口大小调整时调用此函数
         window_width = self.root.winfo_width()
@@ -501,6 +552,7 @@ class WatermarkSystem2:
         self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
         self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
         self.entry.place(x=window_width // 2 + 190, y=500)
+        self.tamper_button.place(height=60, width=100, x=window_width // 2 + 30, y=700)
 
 
     def create_widgets(self):
@@ -534,6 +586,8 @@ class WatermarkSystem2:
         self.wm_txt_button.place(height=60, width=100, x=width // 2 + 30, y=500)
         self.wm_img_button = Button(self.root, text='图像水印', command=self.add_wm_img)
         self.wm_img_button.place(height=60, width=100, x=width // 2 + 30, y=600)
+        self.tamper_button = Button(self.root, text='图像篡改', command=self.add_tamper)
+        self.tamper_button.place(height=60, width=100, x=width // 2 + 30, y=700)
 
         self.entry = Entry(self.root)
         self.entry.place(x=width // 2 + 190, y=500)

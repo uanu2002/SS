@@ -867,69 +867,70 @@ def LSB_quyujiaoyan_tiqu():
     tkinter.messagebox.showinfo('提示', '隐藏信息已提取,请查看LSB-regional_verification-recover.txt')
 
 
-def DCT_trans(grayImage):
-    height, width = grayImage.shape
-    grayImage = grayImage.astype(float)
-    lenna_dct = cv2.dct(grayImage)
+def DCT_trans(gray_img):
+    height, width = gray_img.shape
+    gray_img = gray_img.astype(float)
+    img_dct = cv2.dct(gray_img)
     # 记录正负矩阵
     dct_flag = np.ones((height, width))
-    for i in range(height):
-        for j in range(width):
-            if lenna_dct[i, j] < 0:
-                dct_flag[i, j] = -1
+    for h_i in range(height):
+        for w_i in range(width):
+            if img_dct[h_i, w_i] < 0:
+                dct_flag[h_i, w_i] = -1
     # 取log，并进行归一化
-    lenna_dct_log = np.log(1 + abs(lenna_dct))
-    dct_max = np.max(lenna_dct_log)
-    dct_min = np.min(lenna_dct_log)
-    lenna_dct_log255 = np.zeros((height, width), np.uint8)
-    for i in range(height):
-        for j in range(width):
-            lenna_dct_log255[i, j] = (lenna_dct_log[i, j] - dct_min) \
-                                     / (dct_max - dct_min) * 255
-    return lenna_dct_log255
+    img_dct_log = np.log(1 + abs(img_dct))
+    dct_max = np.max(img_dct_log)
+    dct_min = np.min(img_dct_log)
+    img_dct_log255 = np.zeros((height, width), np.uint8)
+    for h_i in range(height):
+        for w_i in range(width):
+            img_dct_log255[h_i, w_i] = (img_dct_log[h_i, w_i] - dct_min) / (dct_max - dct_min) * 255
 
+    return img_dct_log255, dct_flag, dct_max, dct_min
 
-def FFT_trans(grayImage):
-    height, width = grayImage.shape
-    img_fft2 = np.fft.fft2(grayImage)
+def IDCT_trans(img_dct_log_wm, dct_flag, dct_max, dct_min):
+    height, width = img_dct_log_wm.shape
+    img_dct_log_wm = img_dct_log_wm.astype(float)
+    for h_i in range(height):
+        for w_i in range(width):
+            img_dct_log_wm[h_i, w_i] = img_dct_log_wm[h_i, w_i] / 255 * (dct_max - dct_min) + dct_min
+    img_dct_wm = (np.exp(img_dct_log_wm) - 1) * dct_flag
+    img_idct_wm = cv2.idct(img_dct_wm)
+    img_idct_wm = img_idct_wm.astype(np.uint8)
+
+    return img_idct_wm
+
+def FFT_trans(gray_img):
+    height, width = gray_img.shape
+    img_fft2 = np.fft.fft2(gray_img)
     img_fft2_shift = np.fft.fftshift(img_fft2)
     # 对shift归一化
     fft2_flag = img_fft2_shift / abs(img_fft2_shift)
-    # 取log，并进行归一化
+    # 取log，并归一化到0-255
     img_fft2_log = np.log(1 + np.abs(img_fft2_shift))
     fft2_max = np.max(img_fft2_log)
     fft2_min = np.min(img_fft2_log)
     img_fft2_log255 = np.zeros((height, width), np.uint8)
-    for i in range(height):
-        for j in range(width):
-            img_fft2_log255[i, j] = (img_fft2_log[i, j] - fft2_min) \
-                                    / (fft2_max - fft2_min) * 255
-    return img_fft2_log255
+    for h_i in range(height):
+        for w_i in range(width):
+            img_fft2_log255[h_i, w_i] = (img_fft2_log[h_i, w_i] - fft2_min) / (fft2_max - fft2_min) * 255
+
+    return img_fft2_log255, fft2_flag, fft2_max, fft2_min
 
 
-def IFFT_trans(grayImage):
-    # 离散二维快速傅里叶逆变换ifft2
-    img_fft2_log255 = FFT_trans(grayImage)
-    height, width = grayImage.shape
-    img_fft2 = np.fft.fft2(grayImage)
-    img_fft2_shift = np.fft.fftshift(img_fft2)
-    # 对shift归一化
-    fft2_flag = img_fft2_shift / abs(img_fft2_shift)
-    # 取log，并进行归一化
-    img_fft2_log = np.log(1 + np.abs(img_fft2_shift))
-    fft2_max = np.max(img_fft2_log)
-    fft2_min = np.min(img_fft2_log)
-    img_fft2_log2 = img_fft2_log255.astype(complex)
-    for i in range(height):
-        for j in range(width):
-            img_fft2_log2[i, j] = img_fft2_log2[i, j] / 255 \
-                                  * (fft2_max - fft2_min) + fft2_min
-    img_fft2_shift2 = np.exp(img_fft2_log2) - 1
-    img_fft2_shift2 = fft2_flag * abs(img_fft2_shift2)
-    img_fft2_wm = np.fft.ifftshift(img_fft2_shift2)
-    img_ifft2 = abs(np.fft.ifft2(img_fft2_wm))
-    img_ifft2 = img_ifft2.astype(np.uint8)
-    return img_ifft2
+def IFFT_trans(img_fft2_log_wm, fft2_flag, fft2_max, fft2_min):
+    height, width = img_fft2_log_wm.shape
+    img_fft2_log_wm = img_fft2_log_wm.astype(complex)
+    for h_i in range(height):
+        for w_i in range(width):
+            img_fft2_log_wm[h_i, w_i] = img_fft2_log_wm[h_i, w_i] / 255 * (fft2_max - fft2_min) + fft2_min
+    img_fft2_shift_wm = np.exp(img_fft2_log_wm) - 1
+    img_fft2_shift_wm = fft2_flag * abs(img_fft2_shift_wm)
+    img_fft2_wm = np.fft.ifftshift(img_fft2_shift_wm)
+    img_ifft2_wm = abs(np.fft.ifft2(img_fft2_wm))
+    img_ifft2_wm = img_ifft2_wm.astype(np.uint8)
+
+    return img_ifft2_wm
 
 
 def insert_watermarkb(host_image, watermark_image):
@@ -1126,3 +1127,70 @@ def trace_extract(watermarked_image):
     extracted_watermark3 = extract_watermark(rImg)
     imgMerge1 = cv2.merge([extracted_watermark1, extracted_watermark2, extracted_watermark3])
     return imgMerge1
+
+
+# 图像篡改
+def img_tamper(img):
+    img_temper = img
+    height, width, _ = img_temper.shape
+    x1 = random.randrange(int(height / 4), int(height / 3))
+    y1 = random.randrange(int(width / 4), int(width / 3))
+    x2 = random.randrange(x1 + 1, int(height / 2))
+    y2 = random.randrange(y1 + 1, int(width / 2))
+    print("Tampered area: (" + str(x1) + "," + str(y1) + "), (" + str(x2) + "," + str(y2) + ")")
+    img_part = img_temper[x1:x2, y1:y2]
+    gaussian_img = cv2.GaussianBlur(img_part, (3, 3), 0)
+    img_temper[x1:x2, y1:y2] = gaussian_img
+    return img_temper
+
+
+def FFT_insert(img_fft2_log255, gray_water_mark):
+    height, width = img_fft2_log255.shape
+    height2, width2 = gray_water_mark.shape
+    # 改变插入水印的大小
+    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    for h_i in range(new_h):
+        for w_i in range(new_w):
+            if gray_water_mark[h_i, w_i] < 50:
+                img_fft2_log255[h_i, w_i] = gray_water_mark[h_i, w_i]
+    gray_water_mark180 = np.rot90(gray_water_mark, 2)
+    for h_i in range(new_h):
+        for w_i in range(new_w):
+            if gray_water_mark180[h_i, w_i] < 50:
+                img_fft2_log255[height - new_h + h_i, width - new_w + w_i] = gray_water_mark180[h_i, w_i]
+    img_fft2_log_wm = img_fft2_log255
+
+    return img_fft2_log_wm
+
+def DCT_insert(img_dct_log255, gray_water_mark):
+    height, width = img_dct_log255.shape
+    height2, width2 = gray_water_mark.shape
+    # 改变插入水印的大小
+    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    for h_i in range(new_h):
+        for w_i in range(new_w):
+            if gray_water_mark[h_i, w_i] < 10:
+                img_dct_log255[height - new_h + h_i, width - new_w + w_i] = 50
+    img_idct_log_wm = img_dct_log255
+
+    return img_idct_log_wm
+
+def Change_Detect(gray_change, img_idct_wm):
+    height, width = img_idct_wm.shape
+    gray_change = gray_change.astype(float)
+    change_dct = cv2.dct(gray_change)
+    change_dct_log = np.log(1 + abs(change_dct))
+    dct_max = np.max(change_dct_log)
+    dct_min = np.min(change_dct_log)
+    change_dct_log255 = np.zeros((height, width), np.uint8)
+    for h_i in range(height):
+        for w_i in range(width):
+            change_dct_log255[h_i, w_i] = (change_dct_log[h_i, w_i] - dct_min) / (dct_max - dct_min) * 255
+
+    return change_dct_log255 - img_idct_wm
