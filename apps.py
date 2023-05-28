@@ -6,9 +6,11 @@ import numpy as np
 from tkinter import *
 from tkinter import ttk
 from functools import partial
+
 np.set_printoptions(suppress=True)
 plt.rcParams['font.sans-serif'] = ['SimHei']
 rootdir = "./tmp/"
+
 
 def create_random_interval():
     root = Toplevel()
@@ -374,11 +376,12 @@ class WatermarkSystem2:
         self.fontStyle = fontStyle
         self.fontStyle2 = fontStyle2
         self.img_origin_path = filedialog.askopenfilename()
+        self.mask_path = rootdir + "defaultwm.png"
         self.img_origin = PhotoImage(file=self.img_origin_path)
         self.img_show1 = PhotoImage(file=self.img_origin_path)
         self.img_show2 = PhotoImage(file=self.img_origin_path)
+        self.mask_show1 = PhotoImage(file=self.mask_path)
         self.create_widgets()
-
 
     def update_img(self, new_img, img):
         img_path = rootdir + new_img
@@ -387,10 +390,10 @@ class WatermarkSystem2:
     def update_function_sub(self, selected_value):
         values = list()
         if selected_value == "图像分析":
-            values = ["时域分析", "FFT频域分析", "DCT频域分析"]
+            values = ["时域重建", "FFT频域分析", "DCT频域分析"]
 
         elif selected_value == "水印添加":
-            values = ["时域水印添加", "频域水印添加"]
+            values = ["频域水印", "可追踪水印"]
         elif selected_value == "篡改检测":
             values = ["篡改存在", "篡改定位"]
         self.function_combobox_sub['values'] = values
@@ -399,31 +402,51 @@ class WatermarkSystem2:
         prefix_img_path_in = rootdir + str(self.combobox1.get())
         new_option = str(self.combobox1.get()) + '_out'
         img_path_in = prefix_img_path_in + '.png'
-
+        img_out = None
         if selected_method == "FFT频域分析":
-            pass
+            img_in = path2cv2(img_path_in)
+            img_out = FFT_trans(img_in)
+            new_option = new_option + '_FFT'
+
         elif selected_method == "DCT频域分析":
             img_in = path2cv2(img_path_in)
             img_out = DCT_trans(img_in)
             new_option = new_option + '_DCT'
-            img_path_out = rootdir + new_option + '.png'
-            print(img_path_out)
-            cv2.imwrite(img_path_out, img_out)
 
+        elif selected_method == "时域重建":
+            img_in = path2cv2(img_path_in)
+            img_out = IFFT_trans(img_in)
+            new_option = new_option + '_IFFT'
+
+        elif selected_method == "可追踪水印":
+            host_image = cv2.imread(img_path_in, 1)
+
+            # host_image = bImg   # 选择host
+            watermark_image = cv2.imread(self.mask_path, 0)  # 选择水印
+            img_out = trace_insert(host_image, watermark_image)
+            new_option = new_option + '_Trace_marked'
+
+        elif selected_method == "篡改定位":
+            watermarked_image = cv2.imread(img_path_in, 1)
+            img_out = trace_extract(watermarked_image)
+            new_option = new_option + '_Trace_extrated'
+
+
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
         self.add_combobox_option(self.combobox2, new_option)
-        self.update_img(str(new_option)+'.png', self.img_show2)
-        img_path_out = prefix_img_path_in + '_'
-
-
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
 
     def on_select1(self, event):
         selected_value = self.combobox1.get()
-        self.update_img(str(selected_value)+'.png', self.img_show1)
+        self.update_img(str(selected_value) + '.png', self.img_show1)
         print(f"Selected1: {selected_value}")
 
     def on_select2(self, event):
         selected_value = self.combobox2.get()
-        self.update_img(str(selected_value)+'.png', self.img_show2)
+        self.update_img(str(selected_value) + '.png', self.img_show2)
         print(f"Selected2: {selected_value}")
 
     def on_select_function(self, event):
@@ -438,40 +461,91 @@ class WatermarkSystem2:
 
     def add_combobox_option(self, combobox, new_option):
         combobox['values'] = list(combobox['values']) + [new_option]
-        print('123')
+        print('Add combobox option')
 
     def delete_combobox_option(self, combobox, selected_option):
         values = list(combobox['values'])
         values.remove(selected_option)  # 从选项列表中移除选中的选项
         combobox['values'] = values
 
-    def create_widgets(self):
-        Label(self.root, text="基于数字图像的可视化水印系统", font=self.fontStyle).pack()
+    def add_wm_img(self):
+        wm_img = path2cv2(self.img_origin_path)
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        new_option = str(self.combobox1.get()) + '_marked'
+        img_path_in = prefix_img_path_in + '.png'
+        img_path_out = ""
+        img_out = DCT_trans(wm_img)
 
-        self.style = ttk.Style()
+
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
+
+    def add_wm_txt(self):
+        txt = self.entry.get()
+        print(txt)
+
+    def resize(self, event):
+        # 在窗口大小调整时调用此函数
+        window_width = self.root.winfo_width()
+        window_height = self.root.winfo_height()
+        # 计算新的组件位置
+        label_x = window_width // 2
+        label_y = window_height // 2
+        self.img_container2.place(x=label_x + window_width // 30, y=window_height // 30)
+        self.combobox2.place(x=label_x + window_width // 30, y= 440)
+        self.img_container3.place(x=label_x + window_width // 30, y=window_height // 30 + 400 + 100)
+        self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
+        self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
+        self.entry.place(x=window_width // 2 + 190, y=500)
+
+
+    def create_widgets(self):
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        Label(self.root, text="基于数字水印的图片篡改检测系统", font=self.fontStyle).pack()
+        self.root.bind("<Configure>", self.resize)
 
         # 创建标签并显示图片
         self.img_container1 = Label(self.root, image=self.img_show1, width=400, height=400)
         self.img_container2 = Label(self.root, image=self.img_show2, width=400, height=400)
         self.img_container1.place(x=30, y=30)
-        self.img_container2.place(x=500+30, y=30)
+        self.img_container2.place(x=width // 2 + 30, y=30)
+        self.img_container3 = Label(self.root, image=self.mask_show1, width=400, height=400)
+        self.img_container3.place(x=width // 2 + 30, y=450)
 
-        self.combobox1 = ttk.Combobox(self.root, values=["image", "mark", "Option 3"])
+        init_images = ["image", "mark", "liftingbody", "peppers", "saturn", "text"]
+        self.combobox1 = ttk.Combobox(self.root, values=init_images)
+        self.combobox1.configure(width=30, font=('Arial', 12, 'bold'))
         self.combobox1.current(0)
         self.combobox1.bind("<<ComboboxSelected>>", self.on_select1)
         self.combobox1.place(x=30, y=440)
 
-        self.combobox2 = ttk.Combobox(self.root, values=["image", "mark", "Option 3"])
+        self.combobox2 = ttk.Combobox(self.root, values=init_images)
+        self.combobox2.configure(width=30, font=('Arial', 12, 'bold'))
         self.combobox2.current(0)
         self.combobox2.bind("<<ComboboxSelected>>", self.on_select2)
-        self.combobox2.place(x=500+30, y=440)
+        self.combobox2.place(x=width // 2 + 30, y=440)
+
+        self.wm_txt_button = Button(self.root, text='文本水印', command=self.add_wm_txt)
+        self.wm_txt_button.place(height=60, width=100, x=width // 2 + 30, y=500)
+        self.wm_img_button = Button(self.root, text='图像水印', command=self.add_wm_img)
+        self.wm_img_button.place(height=60, width=100, x=width // 2 + 30, y=600)
+
+        self.entry = Entry(self.root)
+        self.entry.place(x=width // 2 + 190, y=500)
 
         self.function_combobox = ttk.Combobox(self.root, values=["图像分析", "水印添加", "篡改检测"])
+        self.function_combobox.configure(width=30, font=('Arial', 12, 'bold'))
         self.function_combobox.current(0)
         self.function_combobox.bind("<<ComboboxSelected>>", self.on_select_function)
         self.function_combobox.place(x=30, y=500)
 
         self.function_combobox_sub = ttk.Combobox(self.root, values=[])
+        self.function_combobox_sub.configure(width=30, font=('Arial', 12, 'bold'))
         self.function_combobox_sub.bind("<<ComboboxSelected>>", self.on_select_function_sub)
         self.function_combobox_sub.place(x=30, y=550)
         # img_container1.pack()

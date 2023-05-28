@@ -9,9 +9,13 @@ def resize_images_in_folder(folder_path, output_size):
             try:
                 # 打开图像文件
                 with Image.open(file_path) as image:
-                    # 调整大小并保持纵横比
-                    image.thumbnail(output_size)
-                    # 保存调整后的图像
+                    if "wm" in file_path:
+                        image.thumbnail((180, 180))
+                        print("Watermarking")
+                    else:
+                        # 调整大小并保持纵横比
+                        image.thumbnail(output_size)
+                        # 保存调整后的图像
                     image.save(file_path)
                     print(f"调整大小并保存图像: {filename}")
             except Exception as e:

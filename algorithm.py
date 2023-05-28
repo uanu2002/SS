@@ -9,7 +9,7 @@ import numpy as np
 import random
 import os
 from utils import *
-
+import hashlib
 quant = np.array([[16, 11, 10, 16, 24, 40, 51, 61],  # QUANTIZATION TABLE
                   [12, 12, 14, 19, 26, 58, 60, 55],  # required for DCT
                   [14, 13, 16, 24, 40, 57, 69, 56],
@@ -885,5 +885,244 @@ def DCT_trans(grayImage):
     for i in range(height):
         for j in range(width):
             lenna_dct_log255[i, j] = (lenna_dct_log[i, j] - dct_min) \
-                                  / (dct_max - dct_min) * 255
+                                     / (dct_max - dct_min) * 255
     return lenna_dct_log255
+
+
+def FFT_trans(grayImage):
+    height, width = grayImage.shape
+    img_fft2 = np.fft.fft2(grayImage)
+    img_fft2_shift = np.fft.fftshift(img_fft2)
+    # 对shift归一化
+    fft2_flag = img_fft2_shift / abs(img_fft2_shift)
+    # 取log，并进行归一化
+    img_fft2_log = np.log(1 + np.abs(img_fft2_shift))
+    fft2_max = np.max(img_fft2_log)
+    fft2_min = np.min(img_fft2_log)
+    img_fft2_log255 = np.zeros((height, width), np.uint8)
+    for i in range(height):
+        for j in range(width):
+            img_fft2_log255[i, j] = (img_fft2_log[i, j] - fft2_min) \
+                                    / (fft2_max - fft2_min) * 255
+    return img_fft2_log255
+
+
+def IFFT_trans(grayImage):
+    # 离散二维快速傅里叶逆变换ifft2
+    img_fft2_log255 = FFT_trans(grayImage)
+    height, width = grayImage.shape
+    img_fft2 = np.fft.fft2(grayImage)
+    img_fft2_shift = np.fft.fftshift(img_fft2)
+    # 对shift归一化
+    fft2_flag = img_fft2_shift / abs(img_fft2_shift)
+    # 取log，并进行归一化
+    img_fft2_log = np.log(1 + np.abs(img_fft2_shift))
+    fft2_max = np.max(img_fft2_log)
+    fft2_min = np.min(img_fft2_log)
+    img_fft2_log2 = img_fft2_log255.astype(complex)
+    for i in range(height):
+        for j in range(width):
+            img_fft2_log2[i, j] = img_fft2_log2[i, j] / 255 \
+                                  * (fft2_max - fft2_min) + fft2_min
+    img_fft2_shift2 = np.exp(img_fft2_log2) - 1
+    img_fft2_shift2 = fft2_flag * abs(img_fft2_shift2)
+    img_fft2_wm = np.fft.ifftshift(img_fft2_shift2)
+    img_ifft2 = abs(np.fft.ifft2(img_fft2_wm))
+    img_ifft2 = img_ifft2.astype(np.uint8)
+    return img_ifft2
+
+
+def insert_watermarkb(host_image, watermark_image):
+    # key_size = 8x8
+    height, width = host_image.shape[:2]  # 确定 高度height 宽度width 便于 水印尺寸进行调节
+
+    watermark_image = cv2.resize(watermark_image, (width, height))  # 对插入的水印进行缩放，使得 水印的尺寸 适合 host
+
+    for i in range(watermark_image.shape[0]):  # 对水印图像进行黑白化处理
+        for j in range(watermark_image.shape[1]):
+            if watermark_image[i][j] > 127:
+                watermark_image[i][j] = 1
+            else:
+                watermark_image[i][j] = 0
+    # cv2.imshow('demo1',watermark_image)
+    block_size = 8  # 分块大小
+
+    sub_image_x = width // block_size
+    sub_image_y = height // block_size
+
+    host_blocks = []  # host的分块
+    watermark_blocks = []  # 水印的分块
+    host_blocks_lsb = []  # host分块的最低有效位
+    watermarked_blocks = []  # 被上了水印之后的分块
+
+    for i in range(sub_image_y):  # 进行分块以后的两重循环，x与y都已经对blocksize整除
+        for j in range(sub_image_x):
+            x0 = j * block_size
+            y0 = i * block_size
+            x1 = x0 + block_size
+            y1 = y0 + block_size
+
+            sub_image = host_image[y0:y1, x0:x1]  # 进行图像的分割，按照blocksize分割
+            host_blocks.append(sub_image)
+
+            sub_image = watermark_image[y0:y1, x0:x1]
+            watermark_blocks.append(sub_image)
+
+    host_blocks_lsb = host_blocks  # 先把 整个 载体分块 给 lsb载体
+    # print(host_blocks_lsb) 8*8
+    for host_block_lsb, watermark_block in zip(host_blocks_lsb,
+                                               watermark_blocks):  # zip把 host_blocks_lsb 与 watermark_blocks 打包成一一对应的对象
+        for i in range(host_block_lsb.shape[0]):
+            for j in range(host_block_lsb.shape[1]):
+                if (host_block_lsb[i][j] % 2) != 0:  # 如果是奇数，减一变成偶数 把所有最低位的1 变成 0
+                    host_block_lsb[i][j] -= 1
+                    # print(host_block_lsb[i][j])
+        ########################################################################################################################################
+        host_block_bytes = host_block_lsb.tobytes()  # 转成字节图片数据转换完成后的二进制数据。
+        # print(host_block_bytes)
+        m = hashlib.md5()  # 获取一个算法加密对象
+        m.update(host_block_bytes)  # 用提供的字节串更新此哈希对象(hash object)的状态。
+        hash = m.digest()  # 返回摘要值,以二进制字节串的形式。
+        # print(hash)
+        host_block_hash_bits = ''.join(f'{b:08b}' for b in hash)  # 将字符串转成二进制字符串
+        # print(host_block_hash_bits)
+        # print(666)
+        first_64_bit_of_hash = host_block_hash_bits[:64]  # 取出前六十四位的哈希
+        #   print(first_64_bit_of_hash)
+        flattened_watermark_block = watermark_block.flatten()  # 降维
+        # 加密对象（host blocks lsb）  -- 二进制数据 -- 变成哈希对象 -- 返回摘要值 二进制字节串 -- 转成二进制字符串
+        XOR_of_hash_and_watermark = []
+        for i in range(64):
+            XOR_of_hash_and_watermark.append(XOR(flattened_watermark_block[i], int(
+                first_64_bit_of_hash[i])))  # 降维的水印 与  加密后的host blocks lsb 异或  相当于把水印插入
+            # print(flattened_watermark_block)
+
+        # print(XOR_of_hash_and_watermark)
+        XOR_of_hash_and_watermark_array = np.reshape(XOR_of_hash_and_watermark, (8, 8))  # 8*8的规格
+
+        for i in range(8):
+            for j in range(8):
+                if XOR_of_hash_and_watermark_array[i][j] == 1:  # 如果值为1 说明 降维的水印 与 加密后的host blocks lsb 不同
+                    host_block_lsb[i][j] += 1  # 那么host block lsb +1
+
+        watermarked_blocks.append(host_block_lsb)  # 加入到最终的产品
+
+    watermarked_image = np.zeros((host_image.shape[0], host_image.shape[1]),
+                                 dtype=np.uint8)  # 创造一个全0数组，参数是hostimage的长和宽，类型是0~255的整数 区别在于
+
+    k = 0
+    for i in range(sub_image_y):  # 对y//blocksize之后的大小
+        for j in range(sub_image_x):
+            x0 = j * block_size
+            y0 = i * block_size
+            x1 = x0 + block_size
+            y1 = y0 + block_size
+
+            watermarked_image[y0:y1, x0:x1] = watermarked_blocks[k]  # 把一位的blocks块给到
+            k += 1
+
+    return watermarked_image
+
+def trace_insert(host_image, watermark_image):
+    bImg, gImg, rImg = cv2.split(host_image)
+    watermarked_image1 = insert_watermarkb(bImg, watermark_image)  # 得到加上水印后的图片
+    watermarked_image2 = insert_watermarkb(gImg, watermark_image)
+    watermarked_image3 = insert_watermarkb(rImg, watermark_image)
+    imgMerge = cv2.merge([watermarked_image1, watermarked_image2, watermarked_image3])
+    return imgMerge
+
+def extract_watermark(watermarked_image):
+    height, width = watermarked_image.shape[:2]
+
+    block_size = 8
+
+    sub_image_x = width // block_size
+    sub_image_y = height // block_size
+
+    watermarked_blocks = []  # 被上了水印的图片
+    extracted_watermark_blocks = []  # 回溯的水印
+
+    for i in range(sub_image_y):
+        for j in range(sub_image_x):
+            x0 = j * block_size
+            y0 = i * block_size
+            x1 = x0 + block_size
+            y1 = y0 + block_size
+
+            sub_image = watermarked_image[y0:y1, x0:x1]
+            watermarked_blocks.append(sub_image)  # 每一个元素是一个8*8的小块图片
+
+    watermarked_blocks_lsb = watermarked_blocks  # 进行8*8分块后的 被加了水印的 图像数组
+    watermark_blocks = []
+    # print(watermarked_blocks_lsb)
+    for watermarked_block_lsb, watermarked_block in zip(watermarked_blocks_lsb, watermarked_blocks):
+        lsbs_of_watermarked = []
+        for i in range(watermarked_block_lsb.shape[0]):  # 第一层循环 8次  #8*8
+            for j in range(watermarked_block_lsb.shape[1]):  # 第二层循环 8次
+                if (watermarked_block_lsb[i][j] % 2) != 0:  # 如果最低位是1
+                    lsbs_of_watermarked.append(1)  #这个是我们的最低位信息，如果最低位是1则在新的block中添加1这个元素
+                    watermarked_block_lsb[i][j] -= 1  # 把最低位1去除，进行之后的异或操作
+                else:
+                    lsbs_of_watermarked.append(0) #如果最低位是0，把0添加到新的block中
+                    # print(watermarked_block_lsb.shape[0])
+                    # print(watermarked_block_lsb.shape[1])
+        # print(lsbs_of_watermarked)
+        #################################################################################################################
+        watermarked_block_bytes = watermarked_block_lsb.tobytes()
+        m = hashlib.md5()
+        m.update(watermarked_block_bytes)
+        hash = m.digest()
+        watermarked_block_hash_bits = ''.join(f'{b:08b}' for b in hash)
+
+        first_64_bit_of_hash = watermarked_block_hash_bits[:64]#对图片（可能被篡改，可能没被篡改）进行哈希映射，取前64位
+
+        XOR_of_hash_and_watermark = []
+        for i in range(64):
+            XOR_of_hash_and_watermark.append(XOR(lsbs_of_watermarked[i], int(first_64_bit_of_hash[i])))#对每一位进行异或，接下来有两种情况
+            #在此回忆一下水印是如何得到的。我们取host,记为I，最低位全部清零（I0），然后进行哈希映射取前64位H(I0)
+            #记水印watermark为W
+            #用H(I0) XOR W ，结果放入 watermarked 的最低位 ，这样函数返回了 watermarked了 . watermarked 与 host 的不同点在于最低有效位
+            #记为 H(I0) XOR W == I @ W(最低位)
+            #两边再同时异或H（I0）得到  W == I @ W（最低位） XOR H(I0)
+            #I0 @ W 最低位可能被篡改 把结果记为 (I0 @ W 最低位)'
+            #（I0 @ W 最低位）' XOR H(I @ W ’| 最低位置0) -->  水印
+            #情况1 在某个block中 I @ W (最低位) 没有被篡改，那么H（I0） 也没有被篡改， 因此这个 block 中水印保持原样
+            #情况2 在某个block中 I @ W （最低位） 被篡改， 那么对应的哈希映射被篡改，与此同时 H（I0）也必将被篡改， 因此这个block 中 水印会出现“大便”一样的噪点，这样的噪点就实现了篡改的检测
+        watermark_block = XOR_of_hash_and_watermark
+
+        watermark_block = np.reshape(watermark_block, (8, 8))
+
+        for i in range(8):
+            for j in range(8):
+                if watermark_block[i][j] == 1:#由于我们的水印只有黑（0）与白（255），因此如果水印block的某一位是1，那么它代表的是亮度255的白
+                    watermark_block[i][j] = 255
+
+        watermark_blocks.append(watermark_block)
+
+    extracted_watermark_image = np.zeros((watermarked_image.shape[0], watermarked_image.shape[1]),
+                                         dtype=np.uint8)  # 创建一个和水印图像一样规格的 全0数组
+
+    k = 0
+    #把一维排列的水印结果复原成二维图像
+    for i in range(sub_image_y):
+        for j in range(sub_image_x):
+            x0 = j * block_size
+            y0 = i * block_size
+            x1 = x0 + block_size
+            y1 = y0 + block_size
+
+            extracted_watermark_image[y0:y1, x0:x1] = watermark_blocks[k]  # 回溯的水印
+            #  0  0  <-- x x
+            #  0  0  <-- x x
+            k += 1
+
+    return extracted_watermark_image  # 回溯的水印
+
+def trace_extract(watermarked_image):
+    bImg, gImg, rImg = cv2.split(watermarked_image)
+
+    extracted_watermark1 = extract_watermark(bImg)
+    extracted_watermark2 = extract_watermark(gImg)
+    extracted_watermark3 = extract_watermark(rImg)
+    imgMerge1 = cv2.merge([extracted_watermark1, extracted_watermark2, extracted_watermark3])
+    return imgMerge1
