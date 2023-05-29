@@ -395,7 +395,7 @@ class WatermarkSystem2:
         elif selected_value == "水印添加":
             values = ["FFT频域水印", "DCT频域水印", "可追踪水印"]
         elif selected_value == "篡改检测":
-            values = ["篡改存在", "篡改定位"]
+            values = ["篡改存在", "篡改定位", "ELA分析"]
         self.function_combobox_sub['values'] = values
 
     def call_method(self, selected_method):
@@ -467,7 +467,15 @@ class WatermarkSystem2:
             img_out = trace_extract(watermarked_image)
             new_option = new_option + '_Trace_extrated'
 
-
+        elif selected_method == "ELA分析":
+            img_out = convert_to_ela_image(img_path_in, quality=90)
+            new_option = new_option + '_ELA'
+            img_path_out = rootdir + new_option + '.png'
+            img_out.save(img_path_out, 'PNG', quality=90)
+            self.add_combobox_option(self.combobox2, new_option)
+            self.add_combobox_option(self.combobox1, new_option)
+            self.update_img(str(new_option) + '.png', self.img_show2)
+            return
 
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
@@ -506,14 +514,15 @@ class WatermarkSystem2:
         combobox['values'] = values
 
     def add_wm_img(self):
-        wm_img = path2cv2(self.img_origin_path)
+        # 图像篡改1
         prefix_img_path_in = rootdir + str(self.combobox1.get())
-        new_option = str(self.combobox1.get()) + '_marked'
+        new_option = str(self.combobox1.get()) + '_out'
         img_path_in = prefix_img_path_in + '.png'
-        img_path_out = ""
-        img_out = DCT_trans(wm_img)
+        img_in = cv2.imread(img_path_in, 1)
 
+        img_out = img_tamper(img_in)
 
+        new_option = new_option + '_Tampered1'
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
         cv2.imwrite(img_path_out, img_out)
@@ -531,7 +540,7 @@ class WatermarkSystem2:
         img_path_in = prefix_img_path_in + '.png'
         img_in = cv2.imread(img_path_in, 1)
         img_out = img_tamper(img_in)
-        new_option = new_option + '_Tampered'
+        new_option = new_option + '_Tampered2'
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
         cv2.imwrite(img_path_out, img_out)
@@ -584,9 +593,9 @@ class WatermarkSystem2:
 
         self.wm_txt_button = Button(self.root, text='文本水印', command=self.add_wm_txt)
         self.wm_txt_button.place(height=60, width=100, x=width // 2 + 30, y=500)
-        self.wm_img_button = Button(self.root, text='图像水印', command=self.add_wm_img)
+        self.wm_img_button = Button(self.root, text='图像篡改1', command=self.add_wm_img)
         self.wm_img_button.place(height=60, width=100, x=width // 2 + 30, y=600)
-        self.tamper_button = Button(self.root, text='图像篡改', command=self.add_tamper)
+        self.tamper_button = Button(self.root, text='图像篡改2', command=self.add_tamper)
         self.tamper_button.place(height=60, width=100, x=width // 2 + 30, y=700)
 
         self.entry = Entry(self.root)

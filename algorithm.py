@@ -1194,3 +1194,26 @@ def Change_Detect(gray_change, img_idct_wm):
             change_dct_log255[h_i, w_i] = (change_dct_log[h_i, w_i] - dct_min) / (dct_max - dct_min) * 255
 
     return change_dct_log255 - img_idct_wm
+
+
+from PIL import Image, ImageChops, ImageEnhance
+def convert_to_ela_image(path, quality):
+    filename = path
+    resaved_filename = filename.split('.')[0] + '.resaved.jpg'
+    ELA_filename = filename.split('.')[0] + '.ela.png'
+
+    im = Image.open(filename).convert('RGB')
+    im.save(resaved_filename, 'JPEG', quality=quality)
+    resaved_im = Image.open(resaved_filename)
+
+    ela_im = ImageChops.difference(im, resaved_im)
+
+    extrema = ela_im.getextrema()
+    max_diff = max([ex[1] for ex in extrema])
+    if max_diff == 0:
+        max_diff = 1
+    scale = 255.0 / max_diff
+
+    ela_im = ImageEnhance.Brightness(ela_im).enhance(scale)
+
+    return ela_im
