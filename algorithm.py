@@ -1143,6 +1143,23 @@ def img_tamper(img):
     img_temper[x1:x2, y1:y2] = gaussian_img
     return img_temper
 
+def img_tamper2(img):
+    img_temper = img
+    height, width, _ = img_temper.shape
+    x1 = random.randrange(0, height - int(height / 7))
+    y1 = random.randrange(0, width - int(width / 7))
+    x2 = random.randrange(x1 + 1, x1 + 1 + int(height / 7))
+    y2 = random.randrange(y1 + 1, y1 + 1 + int(width / 7))
+    img_cut1 = [[h_i for h_i in w_i] for w_i in img_temper[x1:x2, y1:y2]]
+    x3 = random.randrange(0, height - int(height / 7))
+    y3 = random.randrange(0, width - int(width / 7))
+    x4 = x3 + (x2 - x1)
+    y4 = y3 + (y2 - y1)
+    img_cut2 = [[h_i for h_i in w_i] for w_i in img_temper[x3:x4, y3:y4]]
+    img_temper[x1:x2, y1:y2] = img_cut2
+    img_temper[x3:x4, y3:y4] = img_cut1
+    return img_temper
+
 
 def FFT_insert(img_fft2_log255, gray_water_mark):
     height, width = img_fft2_log255.shape

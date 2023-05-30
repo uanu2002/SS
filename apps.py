@@ -520,7 +520,7 @@ class WatermarkSystem2:
         img_path_in = prefix_img_path_in + '.png'
         img_in = cv2.imread(img_path_in, 1)
 
-        img_out = img_tamper(img_in)
+        img_out = img_tamper2(img_in)
 
         new_option = new_option + '_Tampered1'
         img_path_out = rootdir + new_option + '.png'
