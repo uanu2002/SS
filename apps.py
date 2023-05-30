@@ -519,9 +519,7 @@ class WatermarkSystem2:
         new_option = str(self.combobox1.get()) + '_out'
         img_path_in = prefix_img_path_in + '.png'
         img_in = cv2.imread(img_path_in, 1)
-
         img_out = img_tamper2(img_in)
-
         new_option = new_option + '_Tampered1'
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
@@ -532,6 +530,7 @@ class WatermarkSystem2:
 
     def add_wm_txt(self):
         txt = self.entry.get()
+        create_DCT(self.root)
         print(txt)
 
     def add_tamper(self):

@@ -1209,8 +1209,15 @@ def Change_Detect(gray_change, img_idct_wm):
     for h_i in range(height):
         for w_i in range(width):
             change_dct_log255[h_i, w_i] = (change_dct_log[h_i, w_i] - dct_min) / (dct_max - dct_min) * 255
+    changed_img = np.zeros((height, width), np.uint8)
+    for h_i in range(height):
+        for w_i in range(width):
+            if abs(int(change_dct_log255[h_i, w_i]) - int(img_idct_wm[h_i, w_i])) > 20:
+                changed_img[h_i, w_i] = 255
+            else:
+                changed_img[h_i, w_i] = 0
 
-    return change_dct_log255 - img_idct_wm
+    return changed_img
 
 
 from PIL import Image, ImageChops, ImageEnhance
