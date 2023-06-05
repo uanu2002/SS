@@ -27,6 +27,20 @@ def get_key(strr):
     f.closed
     return str
 
+def get_key_str(strr):
+    str = ""
+    s = strr
+    text_len = len(s)
+    for i in range(len(s)):
+        # code.interact(local=locals())
+        str = str + plus(bin(ord(s[i])).replace('0b', ''))
+    # 逐个字节将要隐藏的文件内容转换为二进制，并拼接起来
+    # 1.先用ord()函数将s的内容逐个转换为ascii码
+    # 2.使用bin()函数将十进制的ascii码转换为二进制
+    # 3.由于bin()函数转换二进制后，二进制字符串的前面会有"0b"来表示这个字符串是二进制形式，所以用replace()替换为空
+    # 4.又由于ascii码转换二进制后是七位，而正常情况下每个字符由8位二进制组成，所以使用自定义函数plus将其填充为8位
+    # print str
+    return str
 
 def mod(x, y):
     return x % y;
@@ -109,7 +123,7 @@ def set_center(root, width, height):
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
 def path2cv2(img_path):
-    img = cv2.imread(img_path )
+    img = cv2.imread(img_path)
     cv2img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return cv2img
 

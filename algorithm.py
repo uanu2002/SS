@@ -1241,3 +1241,104 @@ def convert_to_ela_image(path, quality):
     ela_im = ImageEnhance.Brightness(ela_im).enhance(scale)
 
     return ela_im
+
+
+def DCT_txt_insert(img_path_in, txt):
+    Fpath = img_path_in
+    shutil.copy(Fpath, './')
+
+    original_image_file = Fpath.split('/')[-1]
+    # original_image_file是DCT_origin.bmp
+    y = cv2.imread(original_image_file, 0)
+
+    row, col = y.shape
+    row = int(row / 8)
+    col = int(col / 8)
+
+    y1 = y.astype(np.float32)
+    Y = cv2.dct(y1)
+
+    msg = get_key_str(txt)
+
+    count = len(msg)
+    print('count: ', count)
+    k1, k2 = randinterval(row, col, count, 12)
+
+    for i in range(0, count):
+        k1[i] = (k1[i] - 1) * 8 + 1
+        k2[i] = (k2[i] - 1) * 8 + 1
+
+    # 信息嵌入
+    temp = 0
+    H = 1
+    for i in range(0, count):
+        if msg[i] == '0':
+            if Y[k1[i] + 4, k2[i] + 1] > Y[k1[i] + 3, k2[i] + 2]:
+                Y[k1[i] + 4, k2[i] + 1], Y[k1[i] + 3, k2[i] + 2] = swap(Y[k1[i] + 4, k2[i] + 1],
+                                                                        Y[k1[i] + 3, k2[i] + 2])
+        else:
+            if Y[k1[i] + 4, k2[i] + 1] < Y[k1[i] + 3, k2[i] + 2]:
+                Y[k1[i] + 4, k2[i] + 1], Y[k1[i] + 3, k2[i] + 2] = swap(Y[k1[i] + 4, k2[i] + 1],
+                                                                        Y[k1[i] + 3, k2[i] + 2])
+
+        if Y[k1[i] + 4, k2[i] + 1] > Y[k1[i] + 3, k2[i] + 2]:
+            Y[k1[i] + 3, k2[i] + 2] = Y[k1[i] + 3, k2[i] + 2] - H  # 将小系数调整更小
+        else:
+            Y[k1[i] + 4, k2[i] + 1] = Y[k1[i] + 4, k2[i] + 1] - H
+
+    y2 = cv2.idct(Y)
+
+    return y2
+
+
+def DCT_txt_extract(img_path_in):
+    count = int(DCT_text_len)
+    print('count: ', count)
+
+    Fpath = img_path_in
+    dct_encoded_image_file = Fpath.split('/')[-1]
+    dct_img = dct_img = cv2.imread(img_path_in, 0)
+    y = dct_img
+    y1 = y.astype(np.float32)
+    Y = cv2.dct(y1)
+    row, col = y.shape
+    row = int(row / 8)
+    col = int(col / 8)
+    # count = 448
+    k1, k2 = randinterval(row, col, count, 12)
+    for i in range(0, count):
+        k1[i] = (k1[i] - 1) * 8 + 1
+        k2[i] = (k2[i] - 1) * 8 + 1
+
+    # 准备提取并回写信息
+    str2 = 'DCT_recover.txt'
+    b = ""
+
+    for i in range(0, count):
+        if Y[k1[i] + 4, k2[i] + 1] < Y[k1[i] + 3, k2[i] + 2]:
+            b = b + str('0')
+        # print('msg[i]: ',0)
+        else:
+            b = b + str('1')
+        # print('msg[i]: ',1)
+
+    print(b)
+
+    tiqu = "./tmp/"
+    tiqu = tiqu + 'DCT_hidden_text.txt'
+
+    str2 = tiqu
+    res = ""
+    with open(str2, "wb") as f:
+        for i in range(0, len(b), 8):
+            # 以每8位为一组二进制，转换为十进制
+            stra = toasc(b[i:i + 8])
+            # 将转换后的十进制数视为ascii码，再转换为字符串写入到文件中
+            stra = chr(stra)
+            sb = bytes(stra, encoding="utf8")
+            print(stra)
+            res = res + stra
+            f.write(sb)
+    f.closed
+    return b
+

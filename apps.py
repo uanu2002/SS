@@ -375,7 +375,7 @@ class WatermarkSystem2:
         fontStyle2 = tkFont.Font(family="Lucida Grande", size=10)
         self.fontStyle = fontStyle
         self.fontStyle2 = fontStyle2
-        self.img_origin_path = filedialog.askopenfilename()
+        self.img_origin_path = "./tmp/image.png"
         self.mask_path = rootdir + "defaultwm.png"
         self.img_origin = PhotoImage(file=self.img_origin_path)
         self.img_show1 = PhotoImage(file=self.img_origin_path)
@@ -389,13 +389,14 @@ class WatermarkSystem2:
 
     def update_function_sub(self, selected_value):
         values = list()
-        if selected_value == "图像分析":
-            values = ["FFT时域重建", "DCT时域重建", "FFT频域分析", "DCT频域分析"]
-
+        if selected_value == "时域分析":
+            values = ["FFT时域重建", "DCT时域重建"]
+        elif selected_value == "频域分析":
+            values = ["FFT频域分析", "DCT频域分析"]
         elif selected_value == "水印添加":
-            values = ["FFT频域水印", "DCT频域水印", "可追踪水印"]
+            values = ["FFT频域水印", "DCT频域水印", "LSB时域水印"]
         elif selected_value == "篡改检测":
-            values = ["篡改存在", "篡改定位", "ELA分析"]
+            values = ["篡改存在", "篡改定位", "ELA分析", "文本水印提取"]
         self.function_combobox_sub['values'] = values
 
     def call_method(self, selected_method):
@@ -405,6 +406,7 @@ class WatermarkSystem2:
         img_path_in = prefix_img_path_in + '.png'
         img_path_in2 = prefix_img_path_in2 + '.png'
         img_out = None
+        print(img_path_in)
         if selected_method == "FFT频域分析":
             img_in = path2cv2(img_path_in)
             img_out, _, _, _ = FFT_trans(img_in)
@@ -422,7 +424,7 @@ class WatermarkSystem2:
             img_in0 = path2cv2(img_path_in0)
             img_in = path2cv2(img_path_in)
             img_fft2_log_wm, fft2_flag, fft2_max, fft2_min = FFT_trans(img_in0)
-            img_out = IFFT_trans(img_fft2_log_wm, fft2_flag, fft2_max, fft2_min)
+            img_out = IFFT_trans(img_in, fft2_flag, fft2_max, fft2_min)
             new_option = new_option + '_IFFT'
 
         elif selected_method == "DCT时域重建":
@@ -432,8 +434,7 @@ class WatermarkSystem2:
             img_in0 = path2cv2(img_path_in0)
             img_in = path2cv2(img_path_in)
             img_dct_log255, dct_flag, dct_max, dct_min = DCT_trans(img_in0)
-            img_out = IDCT_trans(img_dct_log255, dct_flag, dct_max, dct_min)
-            print(img_out)
+            img_out = IDCT_trans(img_in, dct_flag, dct_max, dct_min)
             new_option = new_option + '_IDCT'
 
         elif selected_method == "FFT频域水印":
@@ -454,7 +455,7 @@ class WatermarkSystem2:
             img_out = Change_Detect(img_in2, img_in)
             new_option = new_option + '_diff'
 
-        elif selected_method == "可追踪水印":
+        elif selected_method == "LSB时域水印":
             host_image = cv2.imread(img_path_in, 1)
 
             # host_image = bImg   # 选择host
@@ -475,6 +476,11 @@ class WatermarkSystem2:
             self.add_combobox_option(self.combobox2, new_option)
             self.add_combobox_option(self.combobox1, new_option)
             self.update_img(str(new_option) + '.png', self.img_show2)
+            return
+
+        elif selected_method == "文本水印提取":
+            txt_out = DCT_txt_extract(img_path_in)
+            self.entry.insert(0, txt_out)
             return
 
         img_path_out = rootdir + new_option + '.png'
@@ -505,7 +511,10 @@ class WatermarkSystem2:
         print(f"Selected_function_sub: {selected_value}")
 
     def add_combobox_option(self, combobox, new_option):
-        combobox['values'] = list(combobox['values']) + [new_option]
+        values = list(combobox['values'])
+        if new_option in values:
+            values.remove(new_option)
+        combobox['values'] = values + [new_option]
         print('Add combobox option')
 
     def delete_combobox_option(self, combobox, selected_option):
@@ -530,8 +539,19 @@ class WatermarkSystem2:
 
     def add_wm_txt(self):
         txt = self.entry.get()
-        create_DCT(self.root)
+        txt = str(txt)
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        img_path_in = prefix_img_path_in + '.png'
+        new_option = str(self.combobox1.get()) + '_out'
+        img_out = DCT_txt_insert(img_path_in, txt)
         print(txt)
+        new_option = new_option + '_txt_marked'
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
 
     def add_tamper(self):
         prefix_img_path_in = rootdir + str(self.combobox1.get())
@@ -556,7 +576,7 @@ class WatermarkSystem2:
         label_y = window_height // 2
         self.img_container2.place(x=label_x + window_width // 30, y=window_height // 30)
         self.combobox2.place(x=label_x + window_width // 30, y= 440)
-        self.img_container3.place(x=label_x + window_width // 30, y=window_height // 30 + 400 + 100)
+        self.img_container3.place(x=label_x + window_width // 30, y=window_height // 30 + 400)
         self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
         self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
         self.entry.place(x=window_width // 2 + 190, y=500)
@@ -575,17 +595,17 @@ class WatermarkSystem2:
         self.img_container1.place(x=30, y=30)
         self.img_container2.place(x=width // 2 + 30, y=30)
         self.img_container3 = Label(self.root, image=self.mask_show1, width=400, height=400)
-        self.img_container3.place(x=width // 2 + 30, y=450)
+        self.img_container3.place(x=width // 2 + 30, y=400)
 
         init_images = ["image", "mark", "liftingbody", "peppers", "saturn", "text"]
         self.combobox1 = ttk.Combobox(self.root, values=init_images)
-        self.combobox1.configure(width=30, font=('Arial', 12, 'bold'))
+        self.combobox1.configure(width=50, font=('Arial', 12, 'bold'))
         self.combobox1.current(0)
         self.combobox1.bind("<<ComboboxSelected>>", self.on_select1)
         self.combobox1.place(x=30, y=440)
 
         self.combobox2 = ttk.Combobox(self.root, values=init_images)
-        self.combobox2.configure(width=30, font=('Arial', 12, 'bold'))
+        self.combobox2.configure(width=50, font=('Arial', 12, 'bold'))
         self.combobox2.current(0)
         self.combobox2.bind("<<ComboboxSelected>>", self.on_select2)
         self.combobox2.place(x=width // 2 + 30, y=440)
@@ -600,7 +620,7 @@ class WatermarkSystem2:
         self.entry = Entry(self.root)
         self.entry.place(x=width // 2 + 190, y=500)
 
-        self.function_combobox = ttk.Combobox(self.root, values=["图像分析", "水印添加", "篡改检测"])
+        self.function_combobox = ttk.Combobox(self.root, values=["时域分析", "频域分析", "水印添加", "篡改检测"])
         self.function_combobox.configure(width=30, font=('Arial', 12, 'bold'))
         self.function_combobox.current(0)
         self.function_combobox.bind("<<ComboboxSelected>>", self.on_select_function)
