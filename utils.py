@@ -127,6 +127,10 @@ def path2cv2(img_path):
     cv2img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return cv2img
 
+def path2cv3(img_path):
+    img = cv2.imread(img_path)
+    return img
+
 def XOR(bit1, bit2):
     if bit1 == bit2:
         return 0

@@ -1,71 +1,40 @@
-from PIL import Image, ImageChops, ImageEnhance
-def convert_to_ela_image(path, quality):
-    filename = path
-    resaved_filename = filename.split('.')[0] + '.resaved.jpg'
-    ELA_filename = filename.split('.')[0] + '.ela.png'
+# RGB图像的DCT变换
+def DCT_RGB(img, water_mark):
+    height, width, channel = img.shape
+    gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
+    height2, width2 = gray_water_mark.shape
+    # 改变插入水印的大小
+    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
 
-    im = Image.open(filename).convert('RGB')
-    im.save(resaved_filename, 'JPEG', quality=quality)
-    resaved_im = Image.open(resaved_filename)
+    img_r = img[:, :, 2]
+    img_g = img[:, :, 1]
+    img_b = img[:, :, 0]
+    img_r_dct_log255, dct_r_flag, dct_r_max, dct_r_min = DCT(img_r)
+    img_g_dct_log255, dct_g_flag, dct_g_max, dct_g_min = DCT(img_g)
+    img_b_dct_log255, dct_b_flag, dct_b_max, dct_b_min = DCT(img_b)
 
-    ela_im = ImageChops.difference(im, resaved_im)
+    img_dct_log255 = np.zeros((height, width, 3), np.uint8)
+    img_dct_log255[:, :, 2] = img_r_dct_log255
+    img_dct_log255[:, :, 1] = img_g_dct_log255
+    img_dct_log255[:, :, 0] = img_b_dct_log255
 
-    extrema = ela_im.getextrema()
-    max_diff = max([ex[1] for ex in extrema])
-    if max_diff == 0:
-        max_diff = 1
-    scale = 255.0 / max_diff
+    img_r_idct_log_wm = DCT_WM(img_r_dct_log255, gray_water_mark)
+    img_g_idct_log_wm = DCT_WM(img_g_dct_log255, gray_water_mark)
+    img_b_idct_log_wm = DCT_WM(img_b_dct_log255, gray_water_mark)
+    img_idct_log_wm = np.zeros((height, width, 3), np.uint8)
+    img_idct_log_wm[:, :, 2] = img_r_idct_log_wm
+    img_idct_log_wm[:, :, 1] = img_g_idct_log_wm
+    img_idct_log_wm[:, :, 0] = img_b_idct_log_wm
 
-    ela_im = ImageEnhance.Brightness(ela_im).enhance(scale)
+    img_r_idct_wm = IDCT(img_r_idct_log_wm, dct_r_flag, dct_r_max, dct_r_min)
+    img_g_idct_wm = IDCT(img_g_idct_log_wm, dct_g_flag, dct_g_max, dct_g_min)
+    img_b_idct_wm = IDCT(img_b_idct_log_wm, dct_b_flag, dct_b_max, dct_b_min)
+    img_idct_wm = np.zeros((height, width, 3), np.uint8)
+    img_idct_wm[:, :, 2] = img_r_idct_wm
+    img_idct_wm[:, :, 1] = img_g_idct_wm
+    img_idct_wm[:, :, 0] = img_b_idct_wm
 
-    return ela_im
-
-img_out = convert_to_ela_image('./tmp/image2.png', 90)
-img_out.save('./res.jpg', 'JPEG', quality = 90)
-
-import random
-from PIL import Image
-
-import random
-from PIL import Image
-
-
-def random_image_manipulation(image_path):
-    # 打开图像
-    image = Image.open(image_path)
-
-    # 获取图像宽度和高度
-    width, height = image.size
-
-    # 随机选择区域交换的起始点和终点
-    x1 = random.randint(0, width // 2)
-    y1 = random.randint(0, height // 2)
-    x2 = random.randint(width // 2, width - 1)
-    y2 = random.randint(height // 2, height - 1)
-
-    # 交换图像的两个区域
-    region1 = image.crop((x1, y1, x2, y2))
-    region2 = image.crop((x2, y2, width, height))  # 修正此行代码
-    image.paste(region2, (x1, y1, x2, y2))
-    image.paste(region1, (x2, y2, width, height))  # 修正此行代码
-
-    # 随机选择补丁的起始点和大小
-    patch_size = random.randint(50, 200)
-    patch_x = random.randint(0, width - patch_size)
-    patch_y = random.randint(0, height - patch_size)
-
-    # 裁剪补丁区域
-    patch = image.crop((patch_x, patch_y, patch_x + patch_size, patch_y + patch_size))
-
-    # 随机选择补丁的目标位置
-    target_x = random.randint(0, width - patch_size)
-    target_y = random.randint(0, height - patch_size)
-
-    # 粘贴补丁到目标位置
-    image.paste(patch, (target_x, target_y))
-
-    # 显示和保存修改后的图像
-    image.show()
-    image.save("modified_image.jpg")
-
-random_image_manipulation('./.resaved.jpg')
+    return img_dct_log255, img_idct_log_wm, img_idct_wm
