@@ -868,6 +868,12 @@ def FFT_insert(img_fft2_log255, gray_water_mark):
 
 def DCT_insert(img_dct_log255, gray_water_mark):
     height, width = img_dct_log255.shape
+    height2, width2 = gray_water_mark.shape
+    # 获取插入水印的大小
+    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
     img_dct_log_wm = np.zeros((height, width), np.uint8)
     img_dct_log_wm = img_dct_log_wm + img_dct_log255
     new_h, new_w = gray_water_mark.shape
