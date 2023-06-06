@@ -22,9 +22,15 @@ def resize_images_in_folder(folder_path, output_size):
                 print(f"处理图像时出错: {filename}")
                 print(str(e))
 
-# 指定文件夹路径和输出大小
-folder_path = "./tmp/"
-output_size = (400, 400)
 
-# 调整图像大小
-resize_images_in_folder(folder_path, output_size)
+
+def resize():
+    # 指定文件夹路径和输出大小
+    folder_path = "./tmp/"
+    output_size = (400, 400)
+
+    # 调整图像大小
+    resize_images_in_folder(folder_path, output_size)
+
+if __name__ == '__main__':
+    resize()

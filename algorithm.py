@@ -1065,9 +1065,6 @@ def extract_watermark(watermarked_image):
                     watermarked_block_lsb[i][j] -= 1  # 把最低位1去除，进行之后的异或操作
                 else:
                     lsbs_of_watermarked.append(0) #如果最低位是0，把0添加到新的block中
-                    # print(watermarked_block_lsb.shape[0])
-                    # print(watermarked_block_lsb.shape[1])
-        # print(lsbs_of_watermarked)
         #################################################################################################################
         watermarked_block_bytes = watermarked_block_lsb.tobytes()
         m = hashlib.md5()
@@ -1080,16 +1077,7 @@ def extract_watermark(watermarked_image):
         XOR_of_hash_and_watermark = []
         for i in range(64):
             XOR_of_hash_and_watermark.append(XOR(lsbs_of_watermarked[i], int(first_64_bit_of_hash[i])))#对每一位进行异或，接下来有两种情况
-            #在此回忆一下水印是如何得到的。我们取host,记为I，最低位全部清零（I0），然后进行哈希映射取前64位H(I0)
-            #记水印watermark为W
-            #用H(I0) XOR W ，结果放入 watermarked 的最低位 ，这样函数返回了 watermarked了 . watermarked 与 host 的不同点在于最低有效位
-            #记为 H(I0) XOR W == I @ W(最低位)
-            #两边再同时异或H（I0）得到  W == I @ W（最低位） XOR H(I0)
-            #I0 @ W 最低位可能被篡改 把结果记为 (I0 @ W 最低位)'
-            #（I0 @ W 最低位）' XOR H(I @ W ’| 最低位置0) -->  水印
-            #情况1 在某个block中 I @ W (最低位) 没有被篡改，那么H（I0） 也没有被篡改， 因此这个 block 中水印保持原样
-            #情况2 在某个block中 I @ W （最低位） 被篡改， 那么对应的哈希映射被篡改，与此同时 H（I0）也必将被篡改， 因此这个block 中 水印会出现“大便”一样的噪点，这样的噪点就实现了篡改的检测
-        watermark_block = XOR_of_hash_and_watermark
+            watermark_block = XOR_of_hash_and_watermark
 
         watermark_block = np.reshape(watermark_block, (8, 8))
 
@@ -1165,19 +1153,19 @@ def FFT_insert(img_fft2_log255, gray_water_mark):
     height, width = img_fft2_log255.shape
     height2, width2 = gray_water_mark.shape
     # 改变插入水印的大小
-    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
     new_h = new_size[0]
     new_w = new_size[1]
     gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
     for h_i in range(new_h):
         for w_i in range(new_w):
             if gray_water_mark[h_i, w_i] < 50:
-                img_fft2_log255[h_i, w_i] = gray_water_mark[h_i, w_i]
+                img_fft2_log255[h_i, w_i] = 0
     gray_water_mark180 = np.rot90(gray_water_mark, 2)
     for h_i in range(new_h):
         for w_i in range(new_w):
             if gray_water_mark180[h_i, w_i] < 50:
-                img_fft2_log255[height - new_h + h_i, width - new_w + w_i] = gray_water_mark180[h_i, w_i]
+                img_fft2_log255[height - new_h + h_i, width - new_w + w_i] = 0
     img_fft2_log_wm = img_fft2_log255
 
     return img_fft2_log_wm
@@ -1186,7 +1174,7 @@ def DCT_insert(img_dct_log255, gray_water_mark):
     height, width = img_dct_log255.shape
     height2, width2 = gray_water_mark.shape
     # 改变插入水印的大小
-    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
     new_h = new_size[0]
     new_w = new_size[1]
     gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
@@ -1348,7 +1336,7 @@ def FFT3_insert(img, water_mark):
     gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
     height2, width2 = gray_water_mark.shape
     # 改变插入水印的大小
-    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
     new_h = new_size[0]
     new_w = new_size[1]
     gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
@@ -1391,7 +1379,7 @@ def DCT3_insert(img, water_mark):
     gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
     height2, width2 = gray_water_mark.shape
     # 改变插入水印的大小
-    new_size = (int(height2 * (width / (5 * width2))), int(width / 5))
+    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
     new_h = new_size[0]
     new_w = new_size[1]
     gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
@@ -1425,3 +1413,16 @@ def DCT3_insert(img, water_mark):
     img_idct_wm[:, :, 0] = img_b_idct_wm
 
     return img_dct_log255, img_dct_log_wm, img_idct_wm
+
+
+def Tamper_Compress(img, compress_rate):
+    height, width = img.shape[:2]
+    # 双三次插值
+    img_resize = cv2.resize(img, (int(width * compress_rate), int(height * compress_rate)),
+                            interpolation=cv2.INTER_AREA)
+    img_compress = cv2.resize(img_resize, (width, height))
+    return img_compress
+
+
+def Change_Detect3():
+    return

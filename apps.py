@@ -396,9 +396,9 @@ class WatermarkSystem2:
         elif selected_value == "水印添加":
             values = ["FFT频域水印", "DCT频域水印", "LSB时域水印", "三维FFT频域水印", "三维DCT频域水印", "文本水印"]
         elif selected_value == "篡改检测":
-            values = ["篡改存在", "篡改定位", "ELA分析", "文本水印提取"]
+            values = ["篡改存在", "三维篡改存在", "篡改定位", "ELA分析", "文本水印提取"]
         elif selected_value == "图像篡改":
-            values = ["篡改1-高斯模糊", "篡改2-图像嫁接"]
+            values = ["篡改1-高斯模糊", "篡改2-图像嫁接", "篡改3-图像压缩"]
         self.function_combobox_sub['values'] = values
 
     def call_method(self, selected_method):
@@ -495,6 +495,12 @@ class WatermarkSystem2:
             img_out = Change_Detect(img_in2, img_in)
             new_option = new_option + '_diff'
 
+        elif selected_method == "三维篡改存在":
+            img_in = path2cv2(img_path_in)
+            img_in2 = path2cv2(img_path_in2)
+            img_out = Change_Detect3(img_in2, img_in)
+            new_option = new_option + '_diff3'
+
         elif selected_method == "LSB时域水印":
             host_image = cv2.imread(img_path_in, 1)
 
@@ -533,6 +539,10 @@ class WatermarkSystem2:
 
         elif selected_method == "篡改2-图像嫁接":
             self.add_wm_img()
+            return
+
+        elif selected_method == "篡改3-图像压缩":
+            self.add_tamper_compress()
             return
 
         img_path_out = rootdir + new_option + '.png'
@@ -594,7 +604,7 @@ class WatermarkSystem2:
         txt = str(txt)
         prefix_img_path_in = rootdir + str(self.combobox1.get())
         img_path_in = prefix_img_path_in + '.png'
-        new_option = str(self.combobox1.get()) + '_out'
+        new_option = str(self.combobox1.get())
         img_out = DCT_txt_insert(img_path_in, txt)
         print(txt)
         new_option = new_option + '_txt_marked'
@@ -607,10 +617,24 @@ class WatermarkSystem2:
 
     def add_tamper(self):
         prefix_img_path_in = rootdir + str(self.combobox1.get())
-        new_option = str(self.combobox1.get()) + '_out'
+        new_option = str(self.combobox1.get())
         img_path_in = prefix_img_path_in + '.png'
         img_in = cv2.imread(img_path_in, 1)
         img_out = img_tamper(img_in)
+        new_option = new_option + '_Tampered1'
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
+
+    def add_tamper_compress(self):
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        new_option = str(self.combobox1.get())
+        img_path_in = prefix_img_path_in + '.png'
+        img_in = path2cv3(img_path_in)
+        img_out = Tamper_Compress(img_in, 0.5)
         new_option = new_option + '_Tampered1'
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
@@ -633,6 +657,7 @@ class WatermarkSystem2:
         self.function_combobox.place(x=window_width // 30, y=530)
         self.function_combobox_sub.place(x=window_width // 30, y=630)
         self.img_container3.place(x=label_x + window_width // 30 + 50, y=window_height // 30 + 450)
+        self.change_wm_button.place(height=60, width=100, x=window_width // 30, y=window_height*7//8)
         # self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
         # self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
         self.entry.place(x=window_width // 2 + 30, y=550)
@@ -653,7 +678,7 @@ class WatermarkSystem2:
         self.img_container3 = Label(self.root, image=self.mask_show1, width=400, height=400)
         self.img_container3.place(x=width // 2 + 30, y=400)
 
-        init_images = ["image", "mark", "liftingbody", "peppers", "saturn", "text"]
+        init_images = ["image", "mark", "liftingbody", "peppers", "saturn"]
         self.combobox1 = ttk.Combobox(self.root, values=init_images)
         self.combobox1.configure(width=50, font=('Arial', 12, 'bold'))
         self.combobox1.current(0)
@@ -670,8 +695,8 @@ class WatermarkSystem2:
         # self.wm_txt_button.place(height=60, width=100, x=width // 2 + 30, y=500)
         # self.wm_img_button = Button(self.root, text='图像篡改1', command=self.add_wm_img)
         # self.wm_img_button.place(height=60, width=100, x=width // 2 + 30, y=600)
-        # self.tamper_button = Button(self.root, text='图像篡改2', command=self.add_tamper)
-        # self.tamper_button.place(height=60, width=100, x=width // 2 + 30, y=700)
+        self.change_wm_button = Button(self.root, text='水印切换', command=self.change_wm)
+        self.change_wm_button.place(height=60, width=100, x=width // 2 + 30, y=700)
 
         self.entry = Entry(self.root)
         self.entry.place(x=width // 2 + 30, y=550)
@@ -686,25 +711,23 @@ class WatermarkSystem2:
         self.function_combobox_sub.configure(width=30, font=('Arial', 12, 'bold'))
         self.function_combobox_sub.bind("<<ComboboxSelected>>", self.on_select_function_sub)
         self.function_combobox_sub.place(x=30, y=600)
-        # img_container1.pack()
-        # Button(self.root, text='空间域水印', command=self.create_LSB).place(height=60, width=100, x=100, y=170)
-        # Button(self.root, text='变换域水印', command=self.create_DCT).place(height=60, width=100, x=250, y=170)
-        # Button(self.root, text='新功能按钮', command=self.create_new_function).place(height=60, width=100, x=400, y=170)
-        #
-        # Message(self.root, text='空间域水印包含:\n    LSB水印嵌入和提取\n    LSB算法改进\n    图像降级算法及其改进',
-        #         cursor='heart', width='200').place(x=100, y=270, width=150)
-        # Message(self.root, text='变换域水印包含:\n    DCT隐写\n    DCT提取', cursor='heart', width='200').place(x=250, y=270,
-        #                                                                                              width=150)
-        #
-        # Message(self.root, text='新功能:\n    描述1\n    描述2\n', cursor='heart', width='200').place(x=400, y=270, width=150)
+
+    def change_wm(self, image1_path = "./tmp/defaultwm.png", image2_path = "./tmp/defaultwm2.png"):
+        image1_name, image1_ext = os.path.splitext(image1_path)
+        image2_name, image2_ext = os.path.splitext(image2_path)
+        tmp = "./tmp/123.png"
+        os.rename(image1_path, tmp)
+        os.rename(image2_path, image1_name + image2_ext)
+        os.rename(image1_path, image2_name + image1_ext)
+        pass
+
+
+
 
     def create_LSB(self):
         create_LSB(self.root)
 
     def create_DCT(self):
-        create_DCT(self.root)
-
-    def create_new_function(self):
         create_DCT(self.root)
 
     def mainloop(self):
