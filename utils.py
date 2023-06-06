@@ -1,6 +1,7 @@
 import random
 import cv2
 
+
 def plus(str):
     return str.zfill(8)
 
@@ -27,6 +28,7 @@ def get_key(strr):
     f.closed
     return str
 
+
 def get_key_str(strr):
     str = ""
     s = strr
@@ -41,6 +43,7 @@ def get_key_str(strr):
     # 4.又由于ascii码转换二进制后是七位，而正常情况下每个字符由8位二进制组成，所以使用自定义函数plus将其填充为8位
     # print str
     return str
+
 
 def mod(x, y):
     return x % y;
@@ -122,14 +125,17 @@ def set_center(root, width, height):
     # 设置窗口的初始位置
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
+
 def path2cv2(img_path):
     img = cv2.imread(img_path)
     cv2img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return cv2img
 
+
 def path2cv3(img_path):
     img = cv2.imread(img_path)
     return img
+
 
 def XOR(bit1, bit2):
     if bit1 == bit2:

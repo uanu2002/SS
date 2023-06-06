@@ -56,7 +56,7 @@ class WatermarkSystem2:
     def call_method(self, selected_method):
         prefix_img_path_in = rootdir + str(self.combobox1.get())
         prefix_img_path_in2 = rootdir + str(self.combobox2.get())
-        new_option = str(self.combobox1.get()) # 输出命名
+        new_option = str(self.combobox1.get())  # 输出命名
         img_path_in = prefix_img_path_in + '.png'
         img_path_in2 = prefix_img_path_in2 + '.png'
         img_out = None
@@ -150,7 +150,10 @@ class WatermarkSystem2:
         elif selected_method == "篡改存在":
             img_in = path2cv2(img_path_in)
             wm = cv2.imread(self.mask_path)
-            img_out = FFT2_Detect(img_in, wm)
+            if "FFT" in img_path_in:
+                img_out = FFT2_Detect(img_in, wm)
+            else:
+                img_out = DCT_Detect2(img_in, wm)
             messagebox.showinfo('篡改存在检测', str(img_out))
             return
 
@@ -199,7 +202,10 @@ class WatermarkSystem2:
         elif selected_method == "频域水印提取":
             img_in = cv2.imread(img_path_in)
             wm = cv2.imread(self.mask_path)
-            img_out = Get_WM(img_in, wm)
+            if "FFT" in img_path_in:
+                img_out = Get_WM(img_in, wm)
+            else:
+                img_out = Get_DCT_WM(img_in, wm)
             new_option = new_option + '_Mark_extracted'
 
         elif selected_method == "篡改1-高斯模糊":
@@ -357,18 +363,17 @@ class WatermarkSystem2:
         label_y = window_height // 2
         self.img_container1.place(x=window_width // 30, y=30 + 20)
         self.img_container2.place(x=label_x + window_width // 30, y=30 + 20)
-        self.combobox1.place(x= window_width // 30, y=480)
-        self.combobox2.place(x=label_x + window_width // 30, y= 480)
+        self.combobox1.place(x=window_width // 30, y=480)
+        self.combobox2.place(x=label_x + window_width // 30, y=480)
         self.function_combobox.place(x=window_width // 30, y=530)
         self.function_combobox_sub.place(x=window_width // 30, y=630)
         self.img_container3.place(x=label_x + window_width // 30 + 50, y=window_height // 30 + 450)
-        self.change_wm_button.place(height=60, width=100, x=window_width // 30, y=window_height*7//8)
-        self.judge_button.place(height=60, width=100, x=window_width // 30 + 150, y=window_height*7//8)
+        self.change_wm_button.place(height=60, width=100, x=window_width // 30, y=window_height * 7 // 8)
+        self.judge_button.place(height=60, width=100, x=window_width // 30 + 150, y=window_height * 7 // 8)
         # self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
         # self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
         self.entry.place(x=window_width // 2 + 30, y=550)
         # self.tamper_button.place(height=60, width=100, x=window_width // 2 + 30, y=700)
-
 
     def create_widgets(self):
         width = self.root.winfo_width()
@@ -420,7 +425,7 @@ class WatermarkSystem2:
         self.function_combobox_sub.bind("<<ComboboxSelected>>", self.on_select_function_sub)
         self.function_combobox_sub.place(x=30, y=600)
 
-    def change_wm(self, image1_path = "./tmp/defaultwm.png", image2_path = "./tmp/defaultwm2.png"):
+    def change_wm(self, image1_path="./tmp/defaultwm.png", image2_path="./tmp/defaultwm2.png"):
         return
         image1_name, image1_ext = os.path.splitext(image1_path)
         image2_name, image2_ext = os.path.splitext(image2_path)
@@ -438,7 +443,8 @@ class WatermarkSystem2:
         img_in = path2cv2(img_path_in)
         img_in2 = path2cv2(img_path_in2)
         img_out = PSNR(img_in, img_in2)
-        messagebox.showinfo('图像质量检测', 'PSNR: ' + str(img_out))
+        img_out2 = SSIM(img_in, img_in2)
+        messagebox.showinfo('图像质量检测', 'PSNR: ' + str(img_out) + '\n' + 'SSIM: ' + str(img_out2))
 
     def mainloop(self):
         self.root.mainloop()

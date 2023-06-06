@@ -10,6 +10,7 @@ import random
 import os
 from utils import *
 import hashlib
+
 quant = np.array([[16, 11, 10, 16, 24, 40, 51, 61],  # QUANTIZATION TABLE
                   [12, 12, 14, 19, 26, 58, 60, 55],  # required for DCT
                   [14, 13, 16, 24, 40, 57, 69, 56],
@@ -575,6 +576,7 @@ def DCT_trans(gray_img):
 
     return img_dct_log255, dct_flag, dct_max, dct_min
 
+
 def IDCT_trans(img_dct_log_wm, dct_flag, dct_max, dct_min):
     height, width = img_dct_log_wm.shape
     img_dct_log_wm = img_dct_log_wm.astype(float)
@@ -586,6 +588,7 @@ def IDCT_trans(img_dct_log_wm, dct_flag, dct_max, dct_min):
     img_idct_wm = img_idct_wm.astype(np.uint8)
 
     return img_idct_wm
+
 
 def FFT_trans(gray_img):
     height, width = gray_img.shape
@@ -618,6 +621,7 @@ def IFFT_trans(img_fft2_log_wm, fft2_flag, fft2_max, fft2_min):
     img_ifft2_wm = img_ifft2_wm.astype(np.uint8)
 
     return img_ifft2_wm
+
 
 # def DWT_trans(img_in):
 #     coeffs = cv2.dwt(img_in, 'haar')
@@ -714,6 +718,7 @@ def insert_watermarkb(host_image, watermark_image):
 
     return watermarked_image
 
+
 def trace_insert(host_image, watermark_image):
     bImg, gImg, rImg = cv2.split(host_image)
     watermarked_image1 = insert_watermarkb(bImg, watermark_image)  # 得到加上水印后的图片
@@ -721,6 +726,7 @@ def trace_insert(host_image, watermark_image):
     watermarked_image3 = insert_watermarkb(rImg, watermark_image)
     imgMerge = cv2.merge([watermarked_image1, watermarked_image2, watermarked_image3])
     return imgMerge
+
 
 def extract_watermark(watermarked_image):
     height, width = watermarked_image.shape[:2]
@@ -751,10 +757,10 @@ def extract_watermark(watermarked_image):
         for i in range(watermarked_block_lsb.shape[0]):  # 第一层循环 8次  #8*8
             for j in range(watermarked_block_lsb.shape[1]):  # 第二层循环 8次
                 if (watermarked_block_lsb[i][j] % 2) != 0:  # 如果最低位是1
-                    lsbs_of_watermarked.append(1)  #这个是我们的最低位信息，如果最低位是1则在新的block中添加1这个元素
+                    lsbs_of_watermarked.append(1)  # 这个是我们的最低位信息，如果最低位是1则在新的block中添加1这个元素
                     watermarked_block_lsb[i][j] -= 1  # 把最低位1去除，进行之后的异或操作
                 else:
-                    lsbs_of_watermarked.append(0) #如果最低位是0，把0添加到新的block中
+                    lsbs_of_watermarked.append(0)  # 如果最低位是0，把0添加到新的block中
         #################################################################################################################
         watermarked_block_bytes = watermarked_block_lsb.tobytes()
         m = hashlib.md5()
@@ -762,18 +768,19 @@ def extract_watermark(watermarked_image):
         hash = m.digest()
         watermarked_block_hash_bits = ''.join(f'{b:08b}' for b in hash)
 
-        first_64_bit_of_hash = watermarked_block_hash_bits[:64]#对图片（可能被篡改，可能没被篡改）进行哈希映射，取前64位
+        first_64_bit_of_hash = watermarked_block_hash_bits[:64]  # 对图片（可能被篡改，可能没被篡改）进行哈希映射，取前64位
 
         XOR_of_hash_and_watermark = []
         for i in range(64):
-            XOR_of_hash_and_watermark.append(XOR(lsbs_of_watermarked[i], int(first_64_bit_of_hash[i])))#对每一位进行异或，接下来有两种情况
+            XOR_of_hash_and_watermark.append(
+                XOR(lsbs_of_watermarked[i], int(first_64_bit_of_hash[i])))  # 对每一位进行异或，接下来有两种情况
             watermark_block = XOR_of_hash_and_watermark
 
         watermark_block = np.reshape(watermark_block, (8, 8))
 
         for i in range(8):
             for j in range(8):
-                if watermark_block[i][j] == 1:#由于我们的水印只有黑（0）与白（255），因此如果水印block的某一位是1，那么它代表的是亮度255的白
+                if watermark_block[i][j] == 1:  # 由于我们的水印只有黑（0）与白（255），因此如果水印block的某一位是1，那么它代表的是亮度255的白
                     watermark_block[i][j] = 255
 
         watermark_blocks.append(watermark_block)
@@ -782,7 +789,7 @@ def extract_watermark(watermarked_image):
                                          dtype=np.uint8)  # 创建一个和水印图像一样规格的 全0数组
 
     k = 0
-    #把一维排列的水印结果复原成二维图像
+    # 把一维排列的水印结果复原成二维图像
     for i in range(sub_image_y):
         for j in range(sub_image_x):
             x0 = j * block_size
@@ -796,6 +803,7 @@ def extract_watermark(watermarked_image):
             k += 1
 
     return extracted_watermark_image  # 回溯的水印
+
 
 def trace_extract(watermarked_image):
     bImg, gImg, rImg = cv2.split(watermarked_image)
@@ -821,6 +829,7 @@ def img_tamper(img):
     img_temper[x1:x2, y1:y2] = gaussian_img
     return img_temper
 
+
 def img_tamper2(img):
     img_temper = img
     height, width, _ = img_temper.shape
@@ -841,40 +850,34 @@ def img_tamper2(img):
 
 def FFT_insert(img_fft2_log255, gray_water_mark):
     height, width = img_fft2_log255.shape
-    height2, width2 = gray_water_mark.shape
-    # 改变插入水印的大小
-    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
-    new_h = new_size[0]
-    new_w = new_size[1]
-    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
-    for h_i in range(new_h):
-        for w_i in range(new_w):
-            if gray_water_mark[h_i, w_i] < 50:
-                img_fft2_log255[h_i, w_i] = 0
-    gray_water_mark180 = np.rot90(gray_water_mark, 2)
-    for h_i in range(new_h):
-        for w_i in range(new_w):
-            if gray_water_mark180[h_i, w_i] < 50:
-                img_fft2_log255[height - new_h + h_i, width - new_w + w_i] = 0
-    img_fft2_log_wm = img_fft2_log255
-
-    return img_fft2_log_wm
-
-def DCT_insert(img_dct_log255, gray_water_mark):
-    height, width = img_dct_log255.shape
-    height2, width2 = gray_water_mark.shape
-    # 改变插入水印的大小
-    new_size = (int(height2 * (width / (4 * width2))), int(width / 4))
-    new_h = new_size[0]
-    new_w = new_size[1]
-    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    img_fft2_log_wm = np.zeros((height, width), np.uint8)
+    img_fft2_log_wm = img_fft2_log_wm + img_fft2_log255
+    new_h, new_w = gray_water_mark.shape
     for h_i in range(new_h):
         for w_i in range(new_w):
             if gray_water_mark[h_i, w_i] < 10:
-                img_dct_log255[height - new_h + h_i, width - new_w + w_i] = 50
-    img_idct_log_wm = img_dct_log255
+                img_fft2_log_wm[h_i, w_i] = 0
+    gray_water_mark180 = np.rot90(gray_water_mark, 2)
+    for h_i in range(new_h):
+        for w_i in range(new_w):
+            if gray_water_mark180[h_i, w_i] < 128:
+                img_fft2_log_wm[height - new_h + h_i, width - new_w + w_i] = 0
 
-    return img_idct_log_wm
+    return img_fft2_log_wm
+
+
+def DCT_insert(img_dct_log255, gray_water_mark):
+    height, width = img_dct_log255.shape
+    img_dct_log_wm = np.zeros((height, width), np.uint8)
+    img_dct_log_wm = img_dct_log_wm + img_dct_log255
+    new_h, new_w = gray_water_mark.shape
+    for h_i in range(new_h):
+        for w_i in range(new_w):
+            if gray_water_mark[h_i, w_i] < 128:
+                img_dct_log_wm[height - new_h + h_i, width - new_w + w_i] = 50
+
+    return img_dct_log_wm
+
 
 def Change_Detect(gray_change, img_idct_wm):
     height, width = img_idct_wm.shape
@@ -899,6 +902,8 @@ def Change_Detect(gray_change, img_idct_wm):
 
 
 from PIL import Image, ImageChops, ImageEnhance
+
+
 def convert_to_ela_image(path, quality):
     filename = path
     resaved_filename = filename.split('.')[0] + '.resaved.jpg'
@@ -1116,6 +1121,7 @@ def Tamper_Compress(img, compress_rate):
 
 from blind_watermark import WaterMark, att
 
+
 def blind_insert(img_path_in, wm_path_in):
     bwm1 = WaterMark(password_wm=1, password_img=1)
     # read original image
@@ -1135,6 +1141,7 @@ def blind_extract(img_path_in, wm_shape):
     bwm1.extract(filename=img_path_in, wm_shape=wm_shape, out_wm_name='./tmp/extracted_tmp.png')
     img_out = cv2.imread('./tmp/extracted_tmp.png')
     return img_out
+
 
 def Tamper_Cut2(img):
     height, width = img.shape[:2]
@@ -1166,19 +1173,20 @@ def Tamper_sharpen_and_blur(image, kernel_size=50, sharpness_ratio=0.5):
     image_copy = image.copy()
     h, w = image_copy.shape[:2]
     for i in range(10):
-        x1, y1 = np.random.randint(0, w-kernel_size), np.random.randint(0, h-kernel_size)
-        x2, y2 = x1+kernel_size, y1+kernel_size
+        x1, y1 = np.random.randint(0, w - kernel_size), np.random.randint(0, h - kernel_size)
+        x2, y2 = x1 + kernel_size, y1 + kernel_size
         roi = image_copy[y1:y2, x1:x2]
         if np.random.random() < sharpness_ratio:
             # 锐化
-            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+            kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
             roi = cv2.filter2D(roi, -1, kernel)
         else:
             # 钝化
-            kernel = np.ones((kernel_size,kernel_size),np.float32)/(kernel_size*kernel_size)
+            kernel = np.ones((kernel_size, kernel_size), np.float32) / (kernel_size * kernel_size)
             roi = cv2.filter2D(roi, -1, kernel)
         image_copy[y1:y2, x1:x2] = roi
     return image_copy
+
 
 def PSNR(original, compressed):
     mse = np.mean((original - compressed) ** 2)
@@ -1217,6 +1225,37 @@ def Get_WM(img, water_mark):
         img_wm[:, :, 0] = changed_img_b_fft2[0:new_h, 0:new_w]
 
     return img_wm
+
+
+# 从图像中提取水印
+def Get_DCT_WM(img, water_mark):
+    height1, width1 = img.shape[:2]
+    gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
+    height2, width2 = gray_water_mark.shape
+    # 获取插入水印的大小
+    new_size = (int(height2 * (width1 / (4 * width2))), int(width1 / 4))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    if len(img.shape) == 2:
+        changed_img_fft2, _, _, _ = DCT_trans(img)
+        img_wm = np.zeros((new_h, new_w), np.uint8)
+        img_wm = img_wm + changed_img_fft2[(height1 - new_h):height1, (width1 - new_w):width1]
+    else:
+        img_r = img[:, :, 2]
+        img_g = img[:, :, 1]
+        img_b = img[:, :, 0]
+        changed_img_r_fft2, _, _, _ = DCT_trans(img_r)
+        # cv2.imshow('changed_img_r_fft2', changed_img_r_fft2)
+        cv2.waitKey(0)
+        changed_img_g_fft2, _, _, _ = DCT_trans(img_g)
+        changed_img_b_fft2, _, _, _ = DCT_trans(img_b)
+        img_wm = np.zeros((new_h, new_w, 3), np.uint8)
+        img_wm[:, :, 2] = changed_img_r_fft2[(height1 - new_h):height1, (width1 - new_w):width1]
+        img_wm[:, :, 1] = changed_img_g_fft2[(height1 - new_h):height1, (width1 - new_w):width1]
+        img_wm[:, :, 0] = changed_img_b_fft2[(height1 - new_h):height1, (width1 - new_w):width1]
+    return img_wm
+
 
 # 只需水印跟篡改图像的篡改检测
 def FFT2_Detect(changed_img, water_mark):
@@ -1267,3 +1306,54 @@ def FFT2_Detect(changed_img, water_mark):
         judge = float(count) / float(count0) * 100 / 3
 
     return judge
+
+
+def DCT_Detect2(changed_img, water_mark):
+    height1, width1 = changed_img.shape[:2]
+    gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
+    height2, width2 = gray_water_mark.shape[:2]
+    # 获取插入水印的大小
+    new_size = (int(height2 * (width1 / (4 * width2))), int(width1 / 4))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    # 提取水印
+    changed_img_get_wm = Get_DCT_WM(changed_img, water_mark)
+    count0 = 0
+    count = 0
+    if len(changed_img.shape) == 2:
+        for h_i in range(new_h):
+            for w_i in range(new_w):
+                if gray_water_mark[h_i, w_i] < 128:
+                    count0 = count0 + 1
+                    if abs(changed_img_get_wm[h_i, w_i] - 50) <= 2:
+                        count = count + 1
+        judge = float(count) / float(count0) * 100
+    else:
+        for h_i in range(new_h):
+            for w_i in range(new_w):
+                if gray_water_mark[h_i, w_i] < 128:
+                    count0 = count0 + 1
+                    if abs(changed_img_get_wm[h_i, w_i, 2] - 50) <= 2:
+                        count = count + 1
+                    if abs(changed_img_get_wm[h_i, w_i, 1] - 50) <= 2:
+                        count = count + 1
+                    if abs(changed_img_get_wm[h_i, w_i, 0] - 50) <= 2:
+                        count = count + 1
+        judge = float(count) / float(count0) * 100 / 3
+
+    return judge
+
+
+import numpy as np
+from skimage.metrics import structural_similarity as ssim
+def SSIM(original_image, watermarked_image):
+
+    # 将图像转换为0-1范围的浮点数
+    # original_image = original_image.astype(np.float64) / 255.0
+    # watermarked_image = watermarked_image.astype(np.float64) / 255.0
+
+    # 计算SSIM
+    ssim_score = ssim(original_image, watermarked_image)
+
+    return ssim_score
