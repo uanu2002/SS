@@ -4,361 +4,12 @@ from algorithm import *
 import tkinter.font as tkFont
 import numpy as np
 from tkinter import *
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from functools import partial
 
 np.set_printoptions(suppress=True)
 plt.rcParams['font.sans-serif'] = ['SimHei']
 rootdir = "./tmp/"
-
-
-def create_random_interval():
-    root = Toplevel()
-    root.title("随机间隔法")
-    width = 800
-    height = 400
-    set_center(root, width, height)
-    Label(root, text="随机间隔法", font=fontStyle1).pack()
-
-    button5 = Button(root, text="LSB随机间隔法水印嵌入", command=LSB_suijijiange_yinxie)  # 控制label的颜色
-    button6 = Button(root, text="LSB随机间隔法水印提取", command=LSB_suijijiange_tiqu)  # 控制label的颜色
-    button5.place(height=60, width=350, x=30, y=150)
-    button6.place(height=60, width=350, x=430, y=150)
-    myentry = Entry(root)
-    myentry.place(x=350, y=65)
-
-    def get_entry_text():
-        global LSB_suijijiange_step
-        LSB_suijijiange_step = myentry.get()
-        tkinter.messagebox.showinfo('提示', '随机间隔步长已被设置为 ' + LSB_suijijiange_step)
-        print('LSB_suijijiange_step: ', LSB_suijijiange_step)
-
-    Button(root, text="设置随机间隔的步长", command=get_entry_text).place(x=357, y=87.5)
-
-    myentry1 = Entry(root)
-    myentry1.place(x=350, y=300)
-
-    def get_entry_text():
-        global LSB_suijijiange_text_len
-        LSB_suijijiange_text_len = myentry1.get()
-        tkinter.messagebox.showinfo('提示', '输入提取信息的长度已被设置为 ' + LSB_suijijiange_text_len)
-        print(LSB_suijijiange_text_len)
-
-    Button(root, text="输入提取信息的长度", command=get_entry_text).place(x=350, y=320)
-
-    Message(root
-            ,
-            text='∎随机间隔法水印嵌入由用户选择图片和隐藏信息\n∎对图像进行随机间隔的LSB隐写后，将秘密信息写入\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像\n∎随机间隔的步长由用户输入').place \
-        (x=100, y=230)
-    Message(root, text='∎随机间隔法水印提取由用户选择要提取信息的图片和提取信息的保存路径\n∎程序将使用同样的随机种子，读取随机间隔法水印嵌入时保存的图像并提取出信息并保存到用户选择的路径').place \
-        (x=530, y=230)
-
-    root.mainloop()
-
-
-def creatre_regional_verification():
-    root = Toplevel()
-    root.title("区域校验位算法")
-    width = 850
-    height = 400
-    set_center(root, width, height)
-    Label(root, text="区域校验位算法", font=fontStyle1).pack()
-
-    button5 = Button(root, text="LSB区域校验位算法水印嵌入", command=LSB_quyujiaoyan_yinxie)
-    button6 = Button(root, text="LSB区域校验位算法水印提取", command=LSB_quyujiaoyan_tiqu)
-    button5.place(height=60, width=370, x=30, y=150)
-    button6.place(height=60, width=370, x=430, y=150)
-
-    myentry = Entry(root)
-    myentry.place(x=350, y=55)
-
-    def get_entry_text():
-        global LSB_quyujiaoyan_size
-        LSB_quyujiaoyan_size = myentry.get()
-        tkinter.messagebox.showinfo('提示', '区域大小已被设置为 ' + LSB_quyujiaoyan_size)
-        print(LSB_quyujiaoyan_size)
-
-    Button(root, text="请输入区域校验位参数(区域大小)", command=get_entry_text).place(x=330, y=78)
-
-    myentry1 = Entry(root)
-    myentry1.place(x=330, y=300)
-
-    def get_entry_text():
-        global LSB_quyujiaoyan_text_len
-        LSB_quyujiaoyan_text_len = myentry1.get()
-        tkinter.messagebox.showinfo('提示', '输入提取信息的长度已被设置为 ' + LSB_quyujiaoyan_text_len)
-        print(LSB_quyujiaoyan_text_len)
-
-    Button(root, text="输入提取信息的长度", command=get_entry_text).place(x=335, y=323)
-
-    Message(root
-            ,
-            text='∎区域校验位算法水印嵌入由用户选择图片和隐藏信息\n∎对图像进行区域校验位的LSB隐写后，将秘密信息写入\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像\n∎区域校验位算法的区域大小由用户输入').place \
-        (x=100, y=230)
-    Message(root, text='∎区域校验位算法水印提取由用户选择要提取信息的图片和提取信息的保存路径\n∎读取区域校验位算法水印嵌入时保存的图像并提取出信息并保存到用户选择的路径').place(x=550, y=230)
-
-    root.mainloop()
-
-
-# 图像降级
-def create_image():
-    root = Toplevel()
-
-    root.title("图片水印")
-    width = 700
-    height = 400
-    set_center(root, width, height)
-
-    w = Canvas(root)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(180, 50, 180, 330,
-                  fill='#C0C0C0',
-                  # fill='red',
-                  width=2, )
-
-    Message(root
-            , text='∎图像降级算法水印嵌入由用户选择载体图片和水印图片\n∎将载体图片的四个最低为比特位替换成水印图片的四个最高比特位\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像').place \
-        (x=500, y=60)
-    Message(root, text='∎图像降级算法水印提取由用户选择要提取信息的图片和提取信息的保存位置\n∎程序读取要提取信息的图片，提取出隐藏的图片并保存').place(x=500, y=230)
-    Label(root, text="图像降级算法", font=fontStyle).pack()
-    button5 = Button(root, text="图像降级算法水印嵌入", command=Image_yinxie)  # 控制label的颜色
-    button6 = Button(root, text="图像降级算法水印提取", command=Image_tiqu)  # 控制label的颜色
-    button5.place(height=60, width=300, x=150, y=80)
-    button6.place(height=60, width=300, x=150, y=230)
-    root.mainloop()
-
-
-# 图像降级改进
-def create_image1():
-    root = Toplevel()
-    root.title("图片水印")
-    width = 700
-    height = 400
-    set_center(root, width, height)
-
-    w = Canvas(root)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(205, 50, 205, 330,
-                  fill='#C0C0C0',
-                  # fill='red',
-                  width=2, )
-
-    Message(root
-            , text='∎图像降级算法改进水印嵌入由用户选择载体图片和水印图片\n∎将水印图片的信息的八位的二进制数分成四块，每块分别加入到载体图片上去\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像'
-            , cursor='cross', width='150').place(x=520, y=60)
-    Message(root, text='∎图像降级算法改进水印提取由用户选择要提取信息的图片和提取信息的保存位置\n∎程序读取要提取信息的图片，提取出隐藏的图片并保存', cursor='cross'
-            , width='150').place(x=520, y=230)
-
-    Label(root, text="图像降级算法改进", font=fontStyle).pack()
-    button5 = Button(root, text="图像降级算法改进水印嵌入", command=Image1_yinxie)  # 控制label的颜色
-    button6 = Button(root, text="图像降级算法改进水印提取", command=Image1_tiqu)  # 控制label的颜色
-    button5.place(height=60, width=350, x=130, y=60)
-    button6.place(height=60, width=350, x=130, y=230)
-    root.mainloop()
-
-
-def create_LSB_improve():
-    root = Toplevel()
-    root.title("LSB算法改进")
-    width = 800
-    height = 400
-    set_center(root, width, height)
-
-    w = Canvas(root)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(290, 100, 290, 300,
-                  fill='#C0C0C0',
-                  # fill='red',
-                  width=2, )
-
-    Label(root, text="LSB算法改进", font=fontStyle1).pack()
-    button7 = Button(root, text="LSB随机间隔法", command=create_random_interval)  # 控制label的颜色
-    button9 = Button(root, text="LSB区域校验位算法", command=creatre_regional_verification)  # 控制label的颜色
-
-    button7.place(height=60, width=350, x=200, y=100)
-    button9.place(height=60, width=350, x=200, y=200)
-    Message(root, text='LSB随机间隔法包括随机间隔法水印嵌入和随机间隔水印提取', cursor='cross', width='150').place(x=600, y=100)
-    Message(root, text='LSB区域校验位算法包括区域校验位算法水印嵌入和区域校验位算法水印提取', cursor='cross', width='150').place(x=600, y=200)
-    root.mainloop()
-
-
-def create_image_downgrade():
-    root = Toplevel()
-    root.title("图像降级算法及其改进")
-    width = 800
-    height = 400
-    set_center(root, width, height)
-
-    w = Canvas(root)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(280, 100, 280, 300,
-                  fill='#C0C0C0',
-                  # fill='red',
-                  width=2, )
-
-    Label(root, text="图像降级算法及其改进", font=fontStyle1).pack()
-    button7 = Button(root, text="图像降级算法", command=create_image)  # 控制label的颜色
-    button9 = Button(root, text="图像降级算法改进", command=create_image1)  # 控制label的颜色
-
-    button7.place(height=60, width=350, x=200, y=100)
-    button9.place(height=60, width=350, x=200, y=200)
-    Message(root, text='图像降级算法包括图像降级算法水印嵌入和图像降级算法水印提取').place(x=600, y=100)
-    Message(root, text='图像降级算法改进包括图像降级算法改进水印嵌入和图像降级算法改进水印提取').place(x=600, y=200)
-
-    root.mainloop()
-
-
-def create_LSB_basic():
-    root = Toplevel()
-    root.title("LSB基本算法")
-    width = 800
-    height = 400
-    set_center(root, width, height)
-    w = Canvas(root)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(290, 50, 290, 330,
-                  fill='#C0C0C0',
-                  width=2, )
-
-    button1 = Button(root, text="LSB基本算法水印嵌入", command=LSB_yinxie)
-    button2 = Button(root, text="LSB基本算法水印提取", command=LSB_tiqu)
-
-    button1.place(height=60, width=300, x=250, y=50)
-    button2.place(height=60, width=300, x=250, y=200)
-
-    Message(root, text='∎LSB基本算法水印嵌入由用户选择图片和隐藏信息\n∎对图像进行最低有效位隐写后将秘密信息写入\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像'
-            , cursor='cross', width='150').place(x=600, y=50)
-    Message(root, text='∎LSB基本算法水印提取由用户选择要提取信息的图片和提取信息的保存路径\n∎程序将读取LSB隐写时保存的图像并提取出信息，保存到用户选择的路径', cursor='cross'
-            , width='150').place(x=600, y=200)
-
-    myentry = Entry(root)
-    myentry.place(x=320, y=300)
-
-    def get_entry_text():
-        global LSB_text_len
-        LSB_text_len = myentry.get()
-        tkinter.messagebox.showinfo('提示', '提取信息长度已被设置为 ' + LSB_text_len)
-        print(LSB_text_len)
-
-    Button(root, text="输入提取信息的长度", command=get_entry_text).place(x=320, y=320)
-
-    Label(root, text="LSB基本算法", font=fontStyle1).pack()
-
-    root.mainloop()
-
-
-def create_DCT(Root):
-    root = Toplevel(Root)
-
-    Label(root, text="变换域水印", font=fontStyle1).pack()
-    root.title("变换域水印")
-    width = 700
-    height = 400
-    set_center(root, width, height)
-    button3 = Button(root, text="DCT水印嵌入", command=DCT_yinxie)  # 控制label的边界
-    button4 = Button(root, text="DCT水印提取", command=DCT_tiqu)  # 控制label的颜色
-    button3.place(height=60, width=200, x=100, y=150)
-    button4.place(height=60, width=200, x=400, y=150)
-
-    Message(root, text='∎DCT水印嵌入由用户选择图片和隐藏信息\n∎对图像进行DCT变换后将秘密信息写入\n∎绘制原始图像和隐写后的图像的直方图对比，并保存隐写后的图像', cursor='cross',
-            width='150').place(x=100, y=250)
-    Message(root, text='∎DCT提取由用户选择要提取信息的图片和提取信息的保存路径\n∎程序将读取DCT隐写时保存的图像并提取出信息并保存到用户选择的路径', cursor='cross',
-            width='150').place(x=430, y=250)
-
-    myentry = Entry(root)
-    myentry.place(x=280, y=300)
-
-    def get_entry_text():
-        global DCT_text_len
-        DCT_text_len = myentry.get()
-        tkinter.messagebox.showinfo('提示', '提取信息长度已被设置为' + DCT_text_len)
-        print(DCT_text_len)
-
-    Button(root, text="输入提取信息的长度", command=get_entry_text).place(x=280, y=330)
-
-    root.mainloop()
-
-
-def create_LSB(Root):
-    root1 = Toplevel(Root)
-    root1.title("空间域水印")
-    width = 800
-    height = 430
-    set_center(root1, width, height)
-    w = Canvas(root1)
-    w.place(x=300, y=0, width=300, height=700)
-    w.create_line(250, 50, 250, 370,
-                  fill='#C0C0C0',
-                  width=2, )
-
-    Label(root1, text="空间域水印").pack()
-    button2 = Button(root1, text="LSB基本算法", command=create_LSB_basic)
-    button0 = Button(root1, text="LSB算法改进", command=create_LSB_improve)
-    button7 = Button(root1, text='图像降级算法及其改进', command=create_image_downgrade)
-
-    Message(root1, text='∎LSB基本算法包括LSB基本算法水印嵌入和LSB基本算法水印提取.\n∎可以实现将信息隐藏在图片中和从隐藏信息的图片中提取信息的功能', cursor='cross'
-            , width='150').place(x=600, y=50)
-    Message(root1, text='∎LSB算法改进包括随机间隔法和区域校验位算法\n∎在LSB算法的基础上，减小了水印嵌入对载体图片统计特性的影响', cursor='cross', width='150').place \
-        (x=600, y=170)
-    Message(root1, text='∎图像降级算法及其改进包括图像降级算法和图像降级算法的改进\n∎可以实现将图片水印嵌入图片当中的功能', cursor='cross', width='150').place(x=600
-                                                                                                                 ,
-                                                                                                                 y=300)
-
-    button2.place(height=60, width=300, x=200, y=50)
-    button0.place(height=60, width=300, x=200, y=170)
-    button7.place(height=60, width=300, x=200, y=300)
-
-    root1.mainloop()
-
-
-class WatermarkSystem:
-    def __init__(self):
-        self.root = Tk()
-        self.root.title("信号与系统")
-        window_width = 1000
-        window_height = 800
-        set_center(self.root, window_width, window_height)
-        self.root.attributes('-toolwindow', False, '-alpha', 0.9, '-fullscreen', False, '-topmost', False)
-        global fontStyle, fontStyle1, fontStyle2
-        fontStyle = tkFont.Font(family="Lucida Grande", size=20)
-        fontStyle1 = tkFont.Font(family="Lucida Grande", size=15)
-        fontStyle2 = tkFont.Font(family="Lucida Grande", size=10)
-        self.fontStyle = fontStyle
-        self.fontStyle2 = fontStyle2
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        self.w = Canvas(self.root)
-        self.w.place(x=500, y=170, width=300, height=190)
-
-        Label(self.root, text="基于数字图像的可视化水印系统", font=self.fontStyle).pack()
-
-        self.style = ttk.Style()
-        self.style.configure("TButton", font=self.fontStyle)
-        self.style.configure("Test.TButton", font=self.fontStyle2)
-        Button(self.root, text='空间域水印', command=self.create_LSB).place(height=60, width=100, x=100, y=170)
-        Button(self.root, text='变换域水印', command=self.create_DCT).place(height=60, width=100, x=250, y=170)
-        Button(self.root, text='新功能按钮', command=self.create_new_function).place(height=60, width=100, x=400, y=170)
-
-        Message(self.root, text='空间域水印包含:\n    LSB水印嵌入和提取\n    LSB算法改进\n    图像降级算法及其改进',
-                cursor='heart', width='200').place(x=100, y=270, width=150)
-        Message(self.root, text='变换域水印包含:\n    DCT隐写\n    DCT提取', cursor='heart', width='200').place(x=250, y=270,
-                                                                                                     width=150)
-
-        Message(self.root, text='新功能:\n    描述1\n    描述2\n', cursor='heart', width='200').place(x=400, y=270, width=150)
-
-    def create_LSB(self):
-        create_LSB(self.root)
-
-    def create_DCT(self):
-        create_DCT(self.root)
-
-    def create_new_function(self):
-        create_DCT(self.root)
-
-    def mainloop(self):
-        self.root.mainloop()
 
 
 class WatermarkSystem2:
@@ -377,6 +28,7 @@ class WatermarkSystem2:
         self.fontStyle2 = fontStyle2
         self.img_origin_path = "./tmp/image.png"
         self.mask_path = rootdir + "defaultwm.png"
+        self.mask_path2 = rootdir + "defaultwm2.png"
         self.img_origin = PhotoImage(file=self.img_origin_path)
         self.img_show1 = PhotoImage(file=self.img_origin_path)
         self.img_show2 = PhotoImage(file=self.img_origin_path)
@@ -394,11 +46,11 @@ class WatermarkSystem2:
         elif selected_value == "频域分析":
             values = ["FFT频域分析", "DCT频域分析", "三维FFT频域分析", "三维DCT频域分析"]
         elif selected_value == "水印添加":
-            values = ["FFT频域水印", "DCT频域水印", "LSB时域水印", "三维FFT频域水印", "三维DCT频域水印", "文本水印"]
+            values = ["DWT-DCT-SVD水印", "FFT频域水印", "DCT频域水印", "LSB时域水印", "三维FFT频域水印", "三维DCT频域水印", "文本水印"]
         elif selected_value == "篡改检测":
-            values = ["篡改存在", "三维篡改存在", "篡改定位", "ELA分析", "文本水印提取"]
+            values = ["DWT-DCT-SVD水印提取", "篡改存在", "频域水印提取", "ELA分析", "图像比对", "文本水印提取"]
         elif selected_value == "图像篡改":
-            values = ["篡改1-高斯模糊", "篡改2-图像嫁接", "篡改3-图像压缩"]
+            values = ["篡改1-高斯模糊", "篡改2-图像嫁接", "篡改3-图像压缩", "篡改4-裁剪攻击", "篡改5-锐化/钝化攻击"]
         self.function_combobox_sub['values'] = values
 
     def call_method(self, selected_method):
@@ -489,17 +141,19 @@ class WatermarkSystem2:
             img_out = DCT_insert(img_in, wm_img)
             new_option = new_option + '_DCT_marked'
 
-        elif selected_method == "篡改存在":
+        elif selected_method == "图片比对":
             img_in = path2cv2(img_path_in)
             img_in2 = path2cv2(img_path_in2)
             img_out = Change_Detect(img_in2, img_in)
             new_option = new_option + '_diff'
 
-        elif selected_method == "三维篡改存在":
+        elif selected_method == "篡改存在":
             img_in = path2cv2(img_path_in)
-            img_in2 = path2cv2(img_path_in2)
-            img_out = Change_Detect3(img_in2, img_in)
-            new_option = new_option + '_diff3'
+            wm = cv2.imread(self.mask_path)
+            img_out = FFT2_Detect(img_in, wm)
+            messagebox.showinfo('篡改存在检测', str(img_out))
+            return
+
 
         elif selected_method == "LSB时域水印":
             host_image = cv2.imread(img_path_in, 1)
@@ -533,6 +187,21 @@ class WatermarkSystem2:
             self.add_wm_txt()
             return
 
+        elif selected_method == "DWT-DCT-SVD水印":
+            img_out = blind_insert(img_path_in, self.mask_path2)
+            new_option = new_option + '_DDS_marked'
+
+        elif selected_method == "DWT-DCT-SVD水印提取":
+            wm = path2cv2(self.mask_path2)
+            img_out = blind_extract(img_path_in, wm.shape)
+            new_option = new_option + '_DDS_extracted'
+
+        elif selected_method == "频域水印提取":
+            img_in = cv2.imread(img_path_in)
+            wm = cv2.imread(self.mask_path)
+            img_out = Get_WM(img_in, wm)
+            new_option = new_option + '_Mark_extracted'
+
         elif selected_method == "篡改1-高斯模糊":
             self.add_tamper()
             return
@@ -543,6 +212,14 @@ class WatermarkSystem2:
 
         elif selected_method == "篡改3-图像压缩":
             self.add_tamper_compress()
+            return
+
+        elif selected_method == "篡改4-裁剪攻击":
+            self.add_tamper_cut()
+            return
+
+        elif selected_method == "篡改5-锐化/钝化攻击":
+            self.add_tamper_blur_sharpen()
             return
 
         img_path_out = rootdir + new_option + '.png'
@@ -635,7 +312,35 @@ class WatermarkSystem2:
         img_path_in = prefix_img_path_in + '.png'
         img_in = path2cv3(img_path_in)
         img_out = Tamper_Compress(img_in, 0.5)
-        new_option = new_option + '_Tampered1'
+        new_option = new_option + '_Tampered3'
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
+
+    def add_tamper_cut(self):
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        new_option = str(self.combobox1.get())
+        img_path_in = prefix_img_path_in + '.png'
+        img_in = path2cv3(img_path_in)
+        img_out = Tamper_Cut2(img_in)
+        new_option = new_option + '_Tampered4'
+        img_path_out = rootdir + new_option + '.png'
+        print(img_path_out)
+        cv2.imwrite(img_path_out, img_out)
+        self.add_combobox_option(self.combobox2, new_option)
+        self.add_combobox_option(self.combobox1, new_option)
+        self.update_img(str(new_option) + '.png', self.img_show2)
+
+    def add_tamper_blur_sharpen(self):
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        new_option = str(self.combobox1.get())
+        img_path_in = prefix_img_path_in + '.png'
+        img_in = path2cv3(img_path_in)
+        img_out = Tamper_sharpen_and_blur(img_in)
+        new_option = new_option + '_Tampered5'
         img_path_out = rootdir + new_option + '.png'
         print(img_path_out)
         cv2.imwrite(img_path_out, img_out)
@@ -658,6 +363,7 @@ class WatermarkSystem2:
         self.function_combobox_sub.place(x=window_width // 30, y=630)
         self.img_container3.place(x=label_x + window_width // 30 + 50, y=window_height // 30 + 450)
         self.change_wm_button.place(height=60, width=100, x=window_width // 30, y=window_height*7//8)
+        self.judge_button.place(height=60, width=100, x=window_width // 30 + 150, y=window_height*7//8)
         # self.wm_img_button.place(height=60, width=100, x=window_width // 2 + 30, y=600)
         # self.wm_txt_button.place(height=60, width=100, x=window_width // 2 + 30, y=500)
         self.entry.place(x=window_width // 2 + 30, y=550)
@@ -697,6 +403,8 @@ class WatermarkSystem2:
         # self.wm_img_button.place(height=60, width=100, x=width // 2 + 30, y=600)
         self.change_wm_button = Button(self.root, text='水印切换', command=self.change_wm)
         self.change_wm_button.place(height=60, width=100, x=width // 2 + 30, y=700)
+        self.judge_button = Button(self.root, text='质量评估', command=self.Judge)
+        self.judge_button.place(height=60, width=100, x=width // 2 + 180, y=700)
 
         self.entry = Entry(self.root)
         self.entry.place(x=width // 2 + 30, y=550)
@@ -713,6 +421,7 @@ class WatermarkSystem2:
         self.function_combobox_sub.place(x=30, y=600)
 
     def change_wm(self, image1_path = "./tmp/defaultwm.png", image2_path = "./tmp/defaultwm2.png"):
+        return
         image1_name, image1_ext = os.path.splitext(image1_path)
         image2_name, image2_ext = os.path.splitext(image2_path)
         tmp = "./tmp/123.png"
@@ -721,14 +430,15 @@ class WatermarkSystem2:
         os.rename(image1_path, image2_name + image1_ext)
         pass
 
-
-
-
-    def create_LSB(self):
-        create_LSB(self.root)
-
-    def create_DCT(self):
-        create_DCT(self.root)
+    def Judge(self):
+        prefix_img_path_in = rootdir + str(self.combobox1.get())
+        prefix_img_path_in2 = rootdir + str(self.combobox2.get())
+        img_path_in = prefix_img_path_in + '.png'
+        img_path_in2 = prefix_img_path_in2 + '.png'
+        img_in = path2cv2(img_path_in)
+        img_in2 = path2cv2(img_path_in2)
+        img_out = PSNR(img_in, img_in2)
+        messagebox.showinfo('图像质量检测', 'PSNR: ' + str(img_out))
 
     def mainloop(self):
         self.root.mainloop()

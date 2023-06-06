@@ -31,319 +31,6 @@ LSB_quyujiaoyan_size = 4
 global LSB_quyujiaoyan_text_len
 
 
-# str1为载体图片路径，str2为隐写文件，str3为加密图片保存的路径
-def func_LSB_yinxie(str1, str2, str3):
-    im = Image.open(str1)
-    # 获取图片的宽和高
-    global width, height
-    width = im.size[0]
-    print("width:" + str(width) + "\n")
-    height = im.size[1]
-    print("height:" + str(height) + "\n")
-    count = 0
-    # 获取需要隐藏的信息
-    key = get_key(str2)
-    print('key: ', key)
-    keylen = len(key)
-    print('keylen: ', keylen)
-
-    for h in range(0, height):
-        for w in range(0, width):
-            pixel = im.getpixel((w, h))
-            # code.interact(local=locals())
-            a = pixel[0]
-            b = pixel[1]
-            c = pixel[2]
-            if count == keylen:
-                break
-            # 下面的操作是将信息隐藏进去
-            # 分别将每个像素点的RGB值余2，这样可以去掉最低位的值
-            # 再从需要隐藏的信息中取出一位，转换为整型
-            # 两值相加，就把信息隐藏起来了
-            a = a - mod(a, 2) + int(key[count])
-            count += 1
-            if count == keylen:
-                im.putpixel((w, h), (a, b, c))
-                break
-            b = b - mod(b, 2) + int(key[count])
-            count += 1
-            if count == keylen:
-                im.putpixel((w, h), (a, b, c))
-                break
-            c = c - mod(c, 2) + int(key[count])
-            count += 1
-            if count == keylen:
-                im.putpixel((w, h), (a, b, c))
-                break
-            if count % 3 == 0:
-                im.putpixel((w, h), (a, b, c))
-    im.save(str3)
-    tkinter.messagebox.showinfo('提示', '图像隐写已完成,隐写后的图像保存为' + str3)
-
-
-# le为所要提取的信息的长度，str1为加密载体图片的路径，str2为提取文件的保存路径
-def func_LSB_tiqu(le, str1, str2):
-    a = ""
-    b = ""
-    im = Image.open(str1)
-    # lenth = le*8
-    lenth = le
-    width = im.size[0]
-    height = im.size[1]
-    count = 0
-    for h in range(0, height):
-        for w in range(0, width):
-            # 获得(w,h)点像素的值
-            pixel = im.getpixel((w, h))
-            # 此处余3，依次从R、G、B三个颜色通道获得最低位的隐藏信息
-            if count % 3 == 0:
-                count += 1
-                b = b + str((mod(int(pixel[0]), 2)))
-                if count == lenth:
-                    break
-            if count % 3 == 1:
-                count += 1
-                b = b + str((mod(int(pixel[1]), 2)))
-                if count == lenth:
-                    break
-            if count % 3 == 2:
-                count += 1
-                b = b + str((mod(int(pixel[2]), 2)))
-                if count == lenth:
-                    break
-        if count == lenth:
-            break
-
-    print(b)
-
-    with open(str2, "wb") as f:
-        for i in range(0, len(b), 8):
-            # 以每8位为一组二进制，转换为十进制
-            stra = toasc(b[i:i + 8])
-            # stra = b[i:i+8]
-            # 将转换后的十进制数视为ascii码，再转换为字符串写入到文件中
-            stra = chr(stra)
-            sb = bytes(stra, encoding="utf8")
-            # print(sb)
-            # f.write(chr(stra))
-            f.write(sb)
-            stra = ""
-    f.closed
-
-
-def LSB_yinxie():
-    tkinter.messagebox.showinfo('提示', '请选择要进行LSB隐写的图像')
-    Fpath = filedialog.askopenfilename()
-    shutil.copy(Fpath, './')
-
-    old = Fpath.split('/')[-1]
-
-    global choosepic_LSB_basic
-    choosepic_LSB_basic = old
-
-    # 处理后输出的图片路径
-    new = old[:-4] + "_LSB-generated." + old[-3:]
-
-    # 需要隐藏的信息
-    tkinter.messagebox.showinfo('提示', '请选择要隐藏的信息(请选择txt文件)')
-    txtpath = filedialog.askopenfilename()
-    shutil.copy(txtpath, './')
-    enc = txtpath.split('/')[-1]
-    # #print(enc)
-    # plt.imshow(old)
-    # plt.show()
-    func_LSB_yinxie(old, enc, new)
-
-    global LSB_new
-    LSB_new = new
-
-    old = cv2.imread(old)
-    new = cv2.imread(new)
-
-    plt.figure(figsize=(6, 7))  # matplotlib设置画面大小 600*700
-    # plt.suptitle('LSB信息隐藏')
-    b, g, r = cv2.split(old)
-    old = cv2.merge([r, g, b])
-    b, g, r = cv2.split(new)
-    new = cv2.merge([r, g, b])
-
-    plt.subplot(2, 2, 1)
-    plt.imshow(old)
-    plt.title("原始图像")
-    plt.subplot(2, 2, 2)
-    plt.hist(old.ravel(), 256, [0, 256])
-    plt.title("原始图像直方图")
-    plt.subplot(2, 2, 3)
-    plt.imshow(new)
-    plt.title("隐藏信息的图像")
-    plt.subplot(2, 2, 4)
-    plt.hist(new.ravel(), 256, [0, 256])
-    plt.title("隐藏信息图像直方图")
-    plt.tight_layout()  # 设置默认的间距
-    plt.show()
-
-
-def LSB_tiqu():
-    # le = text_len
-    global LSB_text_len
-    le = int(LSB_text_len)
-    print('le: ', le)
-
-    tkinter.messagebox.showinfo('提示', '请选择要进行LSB提取的图像')
-    Fpath = filedialog.askopenfilename()
-
-    LSB_new = Fpath
-    tkinter.messagebox.showinfo('提示', '请选择将提取信息保存的位置')
-    tiqu = filedialog.askdirectory()
-    # print(tiqu)
-
-    tiqu = tiqu + '/LSB_recover.txt'
-    func_LSB_tiqu(le, LSB_new, tiqu)
-    tkinter.messagebox.showinfo('提示', '隐藏信息已提取,请查看LSB_recover.txt')
-
-
-def DCT_yinxie():
-    tkinter.messagebox.showinfo('提示', '请选择要进行DCT隐写的图像')
-    Fpath = filedialog.askopenfilename()
-    shutil.copy(Fpath, './')
-
-    original_image_file = Fpath.split('/')[-1]
-    # original_image_file是DCT_origin.bmp
-    y = cv2.imread(original_image_file, 0)
-
-    row, col = y.shape
-    row = int(row / 8)
-    col = int(col / 8)
-
-    y1 = y.astype(np.float32)
-    Y = cv2.dct(y1)
-
-    tkinter.messagebox.showinfo('提示', '请选择要隐藏的信息(请选择txt文件)')
-    txtpath = filedialog.askopenfilename()
-    shutil.copy(txtpath, './')
-    tmp = txtpath.split('/')[-1]
-    # tmp是hideInfo_DCT.txt
-
-    msg = get_key(tmp)
-
-    count = len(msg)
-    print('count: ', count)
-    k1, k2 = randinterval(row, col, count, 12)
-
-    for i in range(0, count):
-        k1[i] = (k1[i] - 1) * 8 + 1
-        k2[i] = (k2[i] - 1) * 8 + 1
-
-    # 信息嵌入
-    temp = 0
-    H = 1
-    for i in range(0, count):
-        if msg[i] == '0':
-            if Y[k1[i] + 4, k2[i] + 1] > Y[k1[i] + 3, k2[i] + 2]:
-                Y[k1[i] + 4, k2[i] + 1], Y[k1[i] + 3, k2[i] + 2] = swap(Y[k1[i] + 4, k2[i] + 1],
-                                                                        Y[k1[i] + 3, k2[i] + 2])
-        else:
-            if Y[k1[i] + 4, k2[i] + 1] < Y[k1[i] + 3, k2[i] + 2]:
-                Y[k1[i] + 4, k2[i] + 1], Y[k1[i] + 3, k2[i] + 2] = swap(Y[k1[i] + 4, k2[i] + 1],
-                                                                        Y[k1[i] + 3, k2[i] + 2])
-
-        if Y[k1[i] + 4, k2[i] + 1] > Y[k1[i] + 3, k2[i] + 2]:
-            Y[k1[i] + 3, k2[i] + 2] = Y[k1[i] + 3, k2[i] + 2] - H  # 将小系数调整更小
-        else:
-            Y[k1[i] + 4, k2[i] + 1] = Y[k1[i] + 4, k2[i] + 1] - H
-
-    y2 = cv2.idct(Y)
-
-    global dct_encoded_image_file
-    dct_encoded_image_file = original_image_file[:-4] + "_DCT-generated." + original_image_file[-3:]
-
-    cv2.imwrite(dct_encoded_image_file, y2)
-
-    old = cv2.imread(original_image_file)
-    new = cv2.imread(dct_encoded_image_file)
-
-    tkinter.messagebox.showinfo('提示', '图像隐写已完成,隐写后的图像保存为' + dct_encoded_image_file)
-
-    b, g, r = cv2.split(old)
-    old = cv2.merge([r, g, b])
-    b, g, r = cv2.split(new)
-    new = cv2.merge([r, g, b])
-
-    plt.figure(figsize=(6, 7))  # matplotlib设置画面大小 600*700
-
-    plt.subplot(2, 2, 1)
-    plt.imshow(old)
-    plt.title("原始图像")
-    plt.subplot(2, 2, 2)
-    plt.hist(old.ravel(), 256, [0, 256])
-    plt.title("原始图像直方图")
-    plt.subplot(2, 2, 3)
-    plt.imshow(new)
-    plt.title("隐藏信息的图像")
-    plt.subplot(2, 2, 4)
-    plt.hist(new.ravel(), 256, [0, 256])
-    plt.title("隐藏信息图像直方图")
-    plt.tight_layout()  # 设置默认的间距
-    plt.show()
-
-
-def DCT_tiqu():
-    count = int(DCT_text_len)
-    print('count: ', count)
-
-    tkinter.messagebox.showinfo('提示', '请选择要进行DCT提取的图像')
-    Fpath = filedialog.askopenfilename()
-    dct_encoded_image_file = Fpath.split('/')[-1]
-    # dct_encoded_image_file = './LS'
-    dct_img = cv2.imread(dct_encoded_image_file, 0)
-    print(dct_img)
-    y = dct_img
-    y1 = y.astype(np.float32)
-    Y = cv2.dct(y1)
-    row, col = y.shape
-    row = int(row / 8)
-    col = int(col / 8)
-    # count = 448
-    k1, k2 = randinterval(row, col, count, 12)
-    for i in range(0, count):
-        k1[i] = (k1[i] - 1) * 8 + 1
-        k2[i] = (k2[i] - 1) * 8 + 1
-
-    # 准备提取并回写信息
-    str2 = 'DCT_recover.txt'
-    b = ""
-
-    for i in range(0, count):
-        if Y[k1[i] + 4, k2[i] + 1] < Y[k1[i] + 3, k2[i] + 2]:
-            b = b + str('0')
-        # print('msg[i]: ',0)
-        else:
-            b = b + str('1')
-        # print('msg[i]: ',1)
-
-    print(b)
-
-    tkinter.messagebox.showinfo('提示', '请选择将提取信息保存的位置')
-    tiqu = filedialog.askdirectory()
-    tiqu = tiqu + '/DCT_hidden_text.txt'
-
-    str2 = tiqu
-    with open(str2, "wb") as f:
-        for i in range(0, len(b), 8):
-            # 以每8位为一组二进制，转换为十进制
-            stra = toasc(b[i:i + 8])
-            # stra = b[i:i+8]
-            # 将转换后的十进制数视为ascii码，再转换为字符串写入到文件中
-            stra = chr(stra)
-            sb = bytes(stra, encoding="utf8")
-            f.write(sb)
-            stra = ""
-    f.closed
-
-    tkinter.messagebox.showinfo('提示', '隐藏信息已提取,请查看DCT_hidden_text.txt')
-
-
-# 图像降级改进
 def Image1_yinxie():
     tkinter.messagebox.showinfo('提示', '请选择载体图像')
     Fpath = filedialog.askopenfilename()
@@ -932,6 +619,9 @@ def IFFT_trans(img_fft2_log_wm, fft2_flag, fft2_max, fft2_min):
 
     return img_ifft2_wm
 
+# def DWT_trans(img_in):
+#     coeffs = cv2.dwt(img_in, 'haar')
+
 
 def insert_watermarkb(host_image, watermark_image):
     # key_size = 8x8
@@ -1424,5 +1114,156 @@ def Tamper_Compress(img, compress_rate):
     return img_compress
 
 
-def Change_Detect3():
-    return
+from blind_watermark import WaterMark, att
+
+def blind_insert(img_path_in, wm_path_in):
+    bwm1 = WaterMark(password_wm=1, password_img=1)
+    # read original image
+    bwm1.read_img(img_path_in)
+    # read watermark
+    print(wm_path_in)
+    bwm1.read_wm(wm_path_in)
+    # embed
+    bwm1.embed('./tmp/embedded_tmp.png')
+    img_out = cv2.imread('./tmp/embedded_tmp.png')
+    return img_out
+
+
+def blind_extract(img_path_in, wm_shape):
+    bwm1 = WaterMark(password_wm=1, password_img=1)
+    # notice that wm_shape is necessary
+    bwm1.extract(filename=img_path_in, wm_shape=wm_shape, out_wm_name='./tmp/extracted_tmp.png')
+    img_out = cv2.imread('./tmp/extracted_tmp.png')
+    return img_out
+
+def Tamper_Cut2(img):
+    height, width = img.shape[:2]
+    if len(img.shape) == 2:
+        img_tamper = np.zeros((height, width), np.uint8)
+        img_tamper = img + img_tamper
+        x1 = random.randrange(0, height - int(height / 5))
+        y1 = random.randrange(0, width - int(width / 5))
+        x2 = random.randrange(x1 + int(height / 5), height)
+        y2 = random.randrange(y1 + int(width / 5), width)
+        img_cut = np.ones((x2 - x1, y2 - y1), np.uint8)
+        img_cut = img_cut * 255
+        img_tamper[x1:x2, y1:y2] = img_cut
+    else:
+        img_tamper = np.zeros((height, width, 3), np.uint8)
+        img_tamper = img + img_tamper
+        x1 = random.randrange(0, height - int(height / 5))
+        y1 = random.randrange(0, width - int(width / 5))
+        x2 = random.randrange(x1 + int(height / 5), height)
+        y2 = random.randrange(y1 + int(width / 5), width)
+        img_cut = np.ones((x2 - x1, y2 - y1, 3), np.uint8)
+        img_cut = img_cut * 255
+        img_tamper[x1:x2, y1:y2, :] = img_cut
+    return img_tamper
+
+
+def Tamper_sharpen_and_blur(image, kernel_size=50, sharpness_ratio=0.5):
+    # 随机选择一些区域进行锐化或钝化
+    image_copy = image.copy()
+    h, w = image_copy.shape[:2]
+    for i in range(10):
+        x1, y1 = np.random.randint(0, w-kernel_size), np.random.randint(0, h-kernel_size)
+        x2, y2 = x1+kernel_size, y1+kernel_size
+        roi = image_copy[y1:y2, x1:x2]
+        if np.random.random() < sharpness_ratio:
+            # 锐化
+            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+            roi = cv2.filter2D(roi, -1, kernel)
+        else:
+            # 钝化
+            kernel = np.ones((kernel_size,kernel_size),np.float32)/(kernel_size*kernel_size)
+            roi = cv2.filter2D(roi, -1, kernel)
+        image_copy[y1:y2, x1:x2] = roi
+    return image_copy
+
+def PSNR(original, compressed):
+    mse = np.mean((original - compressed) ** 2)
+    if mse == 0:
+        return 100
+    max_pixel = 255.0
+    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
+
+    return psnr
+
+
+# 从图像中提取水印
+def Get_WM(img, water_mark):
+    height1, width1 = img.shape[:2]
+    gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
+    height2, width2 = gray_water_mark.shape
+    # 获取插入水印的大小
+    new_size = (int(height2 * (width1 / (4 * width2))), int(width1 / 4))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    if len(img.shape) == 2:
+        changed_img_fft2, _, _, _ = FFT_trans(img)
+        img_wm = np.zeros((new_h, new_w), np.uint8)
+        img_wm = changed_img_fft2[0:new_h, 0:new_w]
+    else:
+        img_r = img[:, :, 2]
+        img_g = img[:, :, 1]
+        img_b = img[:, :, 0]
+        changed_img_r_fft2, _, _, _ = FFT_trans(img_r)
+        changed_img_g_fft2, _, _, _ = FFT_trans(img_g)
+        changed_img_b_fft2, _, _, _ = FFT_trans(img_b)
+        img_wm = np.zeros((new_h, new_w, 3), np.uint8)
+        img_wm[:, :, 2] = changed_img_r_fft2[0:new_h, 0:new_w]
+        img_wm[:, :, 1] = changed_img_g_fft2[0:new_h, 0:new_w]
+        img_wm[:, :, 0] = changed_img_b_fft2[0:new_h, 0:new_w]
+
+    return img_wm
+
+# 只需水印跟篡改图像的篡改检测
+def FFT2_Detect(changed_img, water_mark):
+    height1, width1 = changed_img.shape[:2]
+    gray_water_mark = cv2.cvtColor(water_mark, cv2.COLOR_BGR2GRAY)
+    height2, width2 = gray_water_mark.shape
+    # 获取插入水印的大小
+    new_size = (int(height2 * (width1 / (4 * width2))), int(width1 / 4))
+    new_h = new_size[0]
+    new_w = new_size[1]
+    gray_water_mark = cv2.resize(gray_water_mark, (new_w, new_h))
+    if len(changed_img.shape) == 2:
+        changed_img_fft2, _, _, _ = FFT_trans(changed_img)
+        # cv2.imshow('changed_img_fft2', changed_img_fft2)
+        cv2.waitKey(0)
+        changed_img_fft2_wm = changed_img_fft2[0:new_h, 0:new_w]
+        count = 0
+        count0 = 0
+        for h_i in range(new_h):
+            for w_i in range(new_w):
+                if gray_water_mark[h_i, w_i] < 10:
+                    count0 = count0 + 1
+                    if abs(changed_img_fft2_wm[h_i, w_i] - 55) <= 12:
+                        count = count + 1
+        judge = float(count) / float(count0) * 100
+    else:
+        changed_img_r = changed_img[:, :, 2]
+        changed_img_g = changed_img[:, :, 1]
+        changed_img_b = changed_img[:, :, 0]
+        changed_img_r_fft2, _, _, _ = FFT_trans(changed_img_r)
+        changed_img_g_fft2, _, _, _ = FFT_trans(changed_img_g)
+        changed_img_b_fft2, _, _, _ = FFT_trans(changed_img_b)
+        changed_img_r_fft2_wm = changed_img_r_fft2[0:new_h, 0:new_w]
+        changed_img_g_fft2_wm = changed_img_g_fft2[0:new_h, 0:new_w]
+        changed_img_b_fft2_wm = changed_img_b_fft2[0:new_h, 0:new_w]
+        count = 0
+        count0 = 0
+        for h_i in range(new_h):
+            for w_i in range(new_w):
+                if gray_water_mark[h_i, w_i] < 10:
+                    count0 = count0 + 1
+                    if abs(changed_img_r_fft2_wm[h_i, w_i] - 55) <= 12:
+                        count = count + 1
+                    if abs(changed_img_g_fft2_wm[h_i, w_i] - 55) <= 12:
+                        count = count + 1
+                    if abs(changed_img_b_fft2_wm[h_i, w_i] - 55) <= 12:
+                        count = count + 1
+        judge = float(count) / float(count0) * 100 / 3
+
+    return judge

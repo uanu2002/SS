@@ -1,4 +1,4 @@
-from apps import WatermarkSystem2, WatermarkSystem
+from apps import WatermarkSystem2
 from preprocess import *
 def main():
     watermark_system = WatermarkSystem2()

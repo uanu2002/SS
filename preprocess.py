@@ -9,7 +9,10 @@ def resize_images_in_folder(folder_path, output_size):
             try:
                 # 打开图像文件
                 with Image.open(file_path) as image:
-                    if "wm" in file_path:
+                    if "wm2" in file_path:
+                        image.thumbnail((48, 48))
+                        print("Watermarking")
+                    elif "wm" in file_path:
                         image.thumbnail((180, 180))
                         print("Watermarking")
                     else:
